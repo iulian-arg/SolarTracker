@@ -18,11 +18,11 @@
 #include "ConfigManager.h"
 #include "WifiManager.h"
 #include "TimeManager.h"
+#include "IOManager.h"
 #include "PositionManager.h"
 // #include "ButtonLEDManager.h"
 // #include "BtnLEDManager.h"
 // #include "RelayManager.h"
-#include "IOManager.h"
 
 BoardPowerManager *boardPowerManager;
 WifiManager *wifiManager;
@@ -69,7 +69,7 @@ void setup()
     ioManager = new IOManager(config);
     ioManager->ResetRelays();
 
-    positioningManager = new PositionManager(config, sensorManager, ioManager);
+    positioningManager = new PositionManager(config, sensorManager);
     ioManager->SetPositionManager(positioningManager);
 
     // buttonLEDManager = new ButtonLEDManager(config, positioningManager);

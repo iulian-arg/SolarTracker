@@ -33,6 +33,7 @@ struct MoveEvent
     MoveDirection direction;
     time_t timestamp;
 };
+    //IOManager *ioManager;
 
 // uint8_t queueSize = 30;
 
@@ -41,7 +42,6 @@ class PositionManager
 private:
     Config config;
     SensorManager *sensorManager;
-    IOManager *ioManager;
     SensorInfo sensorInfo;
 
     std::vector<float> LuxDiffQueue = std::vector<float>();
@@ -52,12 +52,14 @@ private:
 public:
     PositionManager(
         Config _config,
-        SensorManager *_sensorManager,
-        IOManager *_ioManager)
+        SensorManager *_sensorManager
+        // ,
+        // IOManager *_ioManager
+    )
     {
         config = _config;               // Dynamically allocate and copy the config
         sensorManager = _sensorManager; // This will use the copy assignment operator
-        ioManager = _ioManager;   // This will use the copy assignment operator
+        // ioManager = _ioManager;   // This will use the copy assignment operator
         SetPositioningMode(PositionMode::Automatic);
         positioningModeChangeQueue.reserve(config.lightTrackingQueueSize);
         positioningModeChangeQueue.push_back({PositionMode::Automatic, time(nullptr)});
@@ -158,14 +160,15 @@ public:
     void TriggerMoveRight()
     {
         Serial.println("Move Right Triggered");
-        ioManager->TriggerMoveRight();
+        // ioManager->TriggerMoveRight();
+        // ioManager->TriggerMoveRight();
         AddMoveEventQueue(MoveDirection::MoveRight);
     }
 
     void TriggerMoveLeft()
     {
         Serial.println("Move Left Triggered");
-        ioManager->TriggerMoveLeft();
+        // ioManager->TriggerMoveLeft();
         AddMoveEventQueue(MoveDirection::MoveLeft);
     }
 
@@ -177,7 +180,7 @@ public:
             return; // No change in move event
         }
         Serial.println("ResetMoving");
-        ioManager->ResetRelays();
+        // ioManager->ResetRelays();
         AddMoveEventQueue(MoveDirection::NoMove);
     }
 

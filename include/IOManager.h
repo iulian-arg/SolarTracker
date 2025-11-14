@@ -176,7 +176,7 @@ public:
         }
     }
 
-    void SetRelayState(ushort relayPin, bool state)
+    static void SetRelayState(ushort relayPin, bool state)
     {
         digitalWrite(relayPin, state ? LOW : HIGH);
     }
@@ -216,7 +216,7 @@ public:
         // SetRelayState(R0_pin_Power, true);
     }
 
-    void ResetRelays()
+    static void ResetRelays()
     {
         Serial.println("Resetting Relays");
         SetRelayState(R1_pin_MoveLeft, false);
