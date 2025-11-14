@@ -1,0 +1,42 @@
+{
+  "tmSet": {
+    "ntpServer": "pool.ntp.org",
+    "gmtOffset_sec": 7200,
+    "daylightOffset_sec": 3600
+  },
+  "pinSettings": {
+    "R0_pin_Power": 27,
+    "R1_pin_MoveLeft": 26,
+    "R2_pin_MoveRight": 25,
+    "R3_pin": 33,
+    "R4_pin": 32,
+    "B1_pin_Auto": 13,
+    "B2_pin_MoveRight": 12,
+    "B3_pin_MoveLeft": 14,
+    "B4_pin_MaxLeft": 4,
+    "B5_pin_MaxRight": 17,
+    "LED1_pin_Auto": 2,
+    "LED2_pin_Manual": 15
+  },
+  "lightSensorSettings": {
+    "lightDiffTreshold": 70,
+    "lowLightTreshold": 15,
+    "lowLightSleepTimeMs": 2000,
+    "lightTrackingQueueSize": 5,
+    "positioningUpdateIntervalMs": 1000
+  },
+  "wifis": {
+    "RetryCount": 6,
+    "RetryDelay": 1000,
+    "pairs": [
+      [
+        "TP-Link_22F4",
+        "14756450"
+      ],
+      [
+        "HUAWEI-WGcq",
+        "N5HPKrkF"
+      ]
+    ]
+  }
+}
