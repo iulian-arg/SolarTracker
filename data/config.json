@@ -13,8 +13,8 @@
     "B1_pin_Auto": 13,
     "B2_pin_MoveRight": 12,
     "B3_pin_MoveLeft": 14,
-    "B4_pin_MaxLeft": 4,
-    "B5_pin_MaxRight": 17,
+    "B4_pin_MaxLeft": 2,
+    "B5_pin_MaxRight": 15,
     "LED1_pin_Auto": 2,
     "LED2_pin_Manual": 15
   },

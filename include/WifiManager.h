@@ -35,7 +35,7 @@ public:
         Serial.println();
 
         // Serial.printf("Default hostname: %s\n", WiFi.hostname().c_str());
-        for (int i = 0; i <= 4; i++)
+        for (int i = 0; i <= 1; i++)
         {
             Serial.println();
             auto ssid = config.wifis[i].ssid;

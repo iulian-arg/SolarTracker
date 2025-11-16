@@ -18,7 +18,7 @@
 #include "ConfigManager.h"
 #include "WifiManager.h"
 #include "TimeManager.h"
-#include "IOManager.h"
+// #include "IOManager.h"
 #include "PositionManager.h"
 // #include "ButtonLEDManager.h"
 // #include "BtnLEDManager.h"
@@ -33,7 +33,7 @@ PositionManager *positioningManager;
 // RelayManager *relayManager;
 // ButtonLEDManager *buttonLEDManager;
 // BtnLEDManager *btnLEDManager;
-IOManager *ioManager;
+// IOManager *ioManager;
 
 ulong lastProgramTimestamp;
 Config config;
@@ -66,11 +66,11 @@ void setup()
 
     // relayManager = new RelayManager(config);
     // relayManager->ResetRelays();
-    ioManager = new IOManager(config);
-    ioManager->ResetRelays();
+    // ioManager = new IOManager(config);
+    // ioManager->ResetRelays();
 
     positioningManager = new PositionManager(config, sensorManager);
-    ioManager->SetPositionManager(positioningManager);
+    // ioManager->SetPositionManager(positioningManager);
 
     // buttonLEDManager = new ButtonLEDManager(config, positioningManager);
     // relayManager->SetButtonLEDManager(buttonLEDManager);
@@ -89,7 +89,7 @@ void tick()
 void loop()
 {
     auto positioningInterval = positioningManager->GetPositioningMode() == PositionMode::Manual
-                                   ? 10000
+                                   ? 1000
                                    : config.positioningUpdateIntervalMs;
     if (millis() - previousPositioningMillis >= positioningInterval)
     {
@@ -100,10 +100,11 @@ void loop()
         positioningManager->UpdatePositioning();
     }
 
-    // if (millis() - previousButtonMillis >= 50)
-    // {
-    //     previousButtonMillis = millis();
-    //     buttonLEDManager->MonitorButtonStates();
-    //     buttonLEDManager->UpdateLEDStates();
-    // }
+    if (millis() - previousButtonMillis >= 500)
+    {
+        previousButtonMillis = millis();
+        positioningManager->MonitorBtnStates();
+        positioningManager->UpdateLEDStates();
+        printf("\n analogval = %d", analogRead(34));
+    }
 }
