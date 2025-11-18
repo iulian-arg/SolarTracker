@@ -60,7 +60,7 @@ public:
             Serial.println("Move Right Btn _pressed");
             // delay(50); // Debounce delay
             posManager->SetPositioningMode(PositionMode::Manual);
-            posManager->TriggerMoveRight();
+            posManager->TryMoveRight();
         }
         else if (b3_pin_MoveLeft_state == _pressed &&
                  previousBtnPressed != config.B3_pin_MoveLeft)
@@ -69,7 +69,7 @@ public:
             Serial.println("Move Left Btn _pressed");
             // delay(50); // Debounce delay
             posManager->SetPositioningMode(PositionMode::Manual);
-            posManager->TriggerMoveLeft();
+            posManager->TryMoveLeft();
         }
         else if (b1_pin_Auto_state == _pressed &&
                  previousBtnPressed != config.B1_pin_Auto)

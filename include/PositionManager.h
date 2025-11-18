@@ -19,12 +19,6 @@ struct RelayState
 };
 RelayState relayState;
 
-ushort R1_pin_MoveLeft;
-ushort R2_pin_MoveRight;
-ushort R3_pin;
-ushort R4_pin;
-ushort R0_pin_Power;
-
 enum BtnState
 {
     _notPressed,
@@ -105,27 +99,18 @@ public:
         pinMode(config.B2_pin_MoveRight, INPUT);
         pinMode(config.B3_pin_MoveLeft, INPUT);
         // pinMode(config.LED1_pin_Auto, OUTPUT);
-        // pinMode(config.LED2_pin_Manual, OUTPUT);
         // digitalWrite(config.LED1_pin_Auto, LOW);
-        // digitalWrite(config.LED2_pin_Manual, LOW);
 
-        R1_pin_MoveLeft = config.R1_pin_MoveLeft;
-        R2_pin_MoveRight = config.R2_pin_MoveRight;
-        R3_pin = config.R3_pin;
-        R4_pin = config.R4_pin;
-        R0_pin_Power = config.R0_pin_Power;
+        pinMode(config.R0_pin_Power, OUTPUT);
+        pinMode(config.R1_pin_MoveLeft, OUTPUT);
+        pinMode(config.R2_pin_MoveRight, OUTPUT);
+        // pinMode(config.R3_pin, OUTPUT);
+        pinMode(config.POT1_pin_MaxAngl, INPUT);
 
-        pinMode(R1_pin_MoveLeft, OUTPUT);
-        pinMode(R2_pin_MoveRight, OUTPUT);
-        pinMode(R3_pin, OUTPUT);
-        pinMode(R4_pin, OUTPUT);
-        pinMode(R0_pin_Power, OUTPUT);
-
-        SetRelayState(R0_pin_Power, false);
-        SetRelayState(R1_pin_MoveLeft, false);
-        SetRelayState(R2_pin_MoveRight, false);
-        SetRelayState(R3_pin, false);
-        SetRelayState(R4_pin, false);
+        SetRelayState(config.R0_pin_Power, false);
+        SetRelayState(config.R1_pin_MoveLeft, false);
+        SetRelayState(config.R2_pin_MoveRight, false);
+        // SetRelayState(config.R3_pin, false);
     }
 
     void ReadLightSensors()
@@ -174,11 +159,10 @@ public:
         }
         return MoveDirection::NoMove;
     }
- 
+
     void UpdatePositioning()
     {
         ReadLightSensors();
-        MonitorMaxPositions();
         // PrintQueues();
         CheckForLowLight();
         PrintPositioningMode();
@@ -190,12 +174,12 @@ public:
             {
 
                 // Serial.println("UpdatePositioning: Move Right Triggered");
-                TriggerMoveRight();
+                TryMoveRight();
             }
             else if (positionChange == MoveDirection::MoveLeft)
             {
                 // Serial.println("UpdatePositioning: Move Left Triggered");
-                TriggerMoveLeft();
+                TryMoveLeft();
             }
             else
             {
@@ -204,7 +188,6 @@ public:
         }
         else if (currentMode == PositionMode::LowLight)
         {
-            delay(config.lowLightSleepTimeMs);
             return;
         }
         else if (currentMode == PositionMode::Manual)
@@ -348,7 +331,7 @@ public:
             SetPositioningMode(PositionMode::Automatic);
         }
     }
- 
+
     void MonitorBtnStates()
     {
         BtnState b1_pin_Auto_state = digitalRead(config.B1_pin_Auto) == HIGH ? _pressed : _notPressed;
@@ -361,7 +344,7 @@ public:
             previousBtnPressed = config.B2_pin_MoveRight;
             // Serial.println("Move Right Btn _pressed");
             SetPositioningMode(PositionMode::Manual);
-            TriggerMoveRight();
+            TryMoveRight();
         }
         else if (b3_pin_MoveLeft_state == _pressed &&
                  previousBtnPressed != config.B3_pin_MoveLeft)
@@ -369,7 +352,7 @@ public:
             previousBtnPressed = config.B3_pin_MoveLeft;
             // Serial.println("Move Left Btn _pressed");
             SetPositioningMode(PositionMode::Manual);
-            TriggerMoveLeft();
+            TryMoveLeft();
         }
         else if (b1_pin_Auto_state == _pressed &&
                  previousBtnPressed != config.B1_pin_Auto)
@@ -392,29 +375,6 @@ public:
         }
     }
 
-    void MonitorMaxPositions()
-    {
-        if (digitalRead(config.B4_pin_MaxLeft) == HIGH)
-        {
-            Serial.println("Max Left Position Reached");
-            ResetMoving();
-        }
-        if (digitalRead(config.B5_pin_MaxRight) == HIGH)
-        {
-            Serial.println("Max Right Position Reached");
-            ResetMoving();
-        }
-    }
-
-    bool IsMaxLeft()
-    {
-        return digitalRead(config.B4_pin_MaxLeft) == HIGH;
-    }
-    bool IsMaxRight()
-    {
-        return digitalRead(config.B5_pin_MaxRight) == HIGH;
-    }
-
     void UpdateLEDStates()
     {
         if (millis() % config.ledBlinkIntervalMs < config.ledBlinkDurationMs)
@@ -422,18 +382,15 @@ public:
             if (GetPositioningMode() == PositionMode::Automatic)
             {
                 digitalWrite(config.LED1_pin_Auto, HIGH);
-                digitalWrite(config.LED2_pin_Manual, LOW);
             }
             else if (GetPositioningMode() == PositionMode::Manual)
             {
                 digitalWrite(config.LED1_pin_Auto, LOW);
-                digitalWrite(config.LED2_pin_Manual, HIGH);
             }
         }
         else
         {
             digitalWrite(config.LED1_pin_Auto, LOW);
-            digitalWrite(config.LED2_pin_Manual, LOW);
         }
     }
 
@@ -442,55 +399,39 @@ public:
         digitalWrite(relayPin, state ? LOW : HIGH);
     }
 
-    void TriggerMoveLeft()
+    void TryMoveLeft()
     {
-        if (IsMaxLeft())
-        {
-            Serial.println("At Max Left Position. Cannot Move Left.");
-            return;
-        }
-
         Serial.println("Move Left Triggered");
-        // ioManager->TriggerMoveLeft();
-        AddMoveEventQueue(MoveDirection::MoveLeft);
-        SetRelayState(R1_pin_MoveLeft, true);
-    }
-    void TriggerMoveRight()
-    {
-        if (IsMaxRight())
+        Serial.printf("\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Left_Val, analogRead(config.POT1_pin_MaxAngl));
+        if (analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_Left_Val)
         {
-            Serial.println("At Max Right Position. Cannot Move Right.");
+            ResetMovement();
+            Serial.println("MAX LEFT. Reset movements.");
             return;
         }
-
+        AddMoveEventQueue(MoveDirection::MoveLeft);
+        SetRelayState(config.R1_pin_MoveLeft, true);
+    }
+    void TryMoveRight()
+    {
         Serial.println("Move Right Triggered");
-        // ioManager->TriggerMoveRight();
-        // ioManager->TriggerMoveRight();
+        Serial.printf("\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Right_Val, analogRead(config.POT1_pin_MaxAngl));
+
+        if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_Right_Val)
+        {
+            ResetMovement();
+            Serial.println("MAX RIGHT. Reset movements.");
+            return;
+        }
         AddMoveEventQueue(MoveDirection::MoveRight);
-        SetRelayState(R2_pin_MoveRight, true);
+        SetRelayState(config.R2_pin_MoveRight, true);
     }
 
-    void TriggerR3()
+    void ResetMovement()
     {
-        SetRelayState(R3_pin, true);
-        // delay(1000);
-        // SetRelayState(R0_pin_Power, true);
-    }
-
-    void TriggerR4()
-    {
-        SetRelayState(R4_pin, true);
-        // delay(1000);
-        // SetRelayState(R0_pin_Power, true);
-    }
-
-    void ResetRelays()
-    {
-        Serial.println("Resetting Relays");
-        SetRelayState(R1_pin_MoveLeft, false);
-        SetRelayState(R2_pin_MoveRight, false);
-        SetRelayState(R3_pin, false);
-        SetRelayState(R4_pin, false);
+        Serial.println("Resetting Movement");
+        SetRelayState(config.R1_pin_MoveLeft, false);
+        SetRelayState(config.R2_pin_MoveRight, false);
     }
 };
 #endif

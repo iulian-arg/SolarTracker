@@ -56,7 +56,7 @@ void setup()
     config = configManager->readConfig();
 
     wifiManager = new WifiManager();
-    wifiManager->WifiConnect(config);
+    // wifiManager->WifiConnect(config);
 
     sensorManager = new SensorManager();
     sensorManager->SetupSensors();
@@ -76,6 +76,7 @@ void setup()
     // relayManager->SetButtonLEDManager(buttonLEDManager);
 
     myTicker.attach(1.0, tick);
+    config.POT1_pin_MaxAngl = 35;
 }
 unsigned long previousPositioningMillis = 0;
 unsigned long previousButtonMillis = 0;
@@ -88,9 +89,11 @@ void tick()
 }
 void loop()
 {
-    auto positioningInterval = positioningManager->GetPositioningMode() == PositionMode::Manual
-                                   ? 1000
-                                   : config.positioningUpdateIntervalMs;
+    auto positioningInterval = 
+        positioningManager->GetPositioningMode() == PositionMode::Manual ||
+        positioningManager->GetPositioningMode() == PositionMode::LowLight
+        ? 5 * config.positioningUpdateIntervalMs
+        : config.positioningUpdateIntervalMs;
     if (millis() - previousPositioningMillis >= positioningInterval)
     {
         previousPositioningMillis = millis();
@@ -100,11 +103,10 @@ void loop()
         positioningManager->UpdatePositioning();
     }
 
-    if (millis() - previousButtonMillis >= 500)
+    if (millis() - previousButtonMillis >= 50)
     {
         previousButtonMillis = millis();
         positioningManager->MonitorBtnStates();
         positioningManager->UpdateLEDStates();
-        printf("\n analogval = %d", analogRead(34));
     }
 }
