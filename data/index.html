@@ -1,0 +1,101 @@
+<!-- Complete project details: https://randomnerdtutorials.com/esp32-web-server-websocket-sliders/ -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>LPG Controller</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+    <div class="topnav">
+        <h1>LPG Controller</h1>
+    </div>
+    <div class="content">
+        <div class="preset-container">
+            <input type="button" class="btn btn-first" onclick="setAllValues(this, 0)" value="0" />
+            <input type="button" class="btn btn-first" onclick="setAllValues(this, 25)" value="25" />
+            <input type="button" class="btn btn-first" onclick="setAllValues(this, 50)" value="50" />
+            <input type="button" class="btn btn-first" onclick="setAllValues(this, 75)" value="75" />
+            <input type="button" class="btn btn-first" onclick="setAllValues(this, 100)" value="100" />
+        </div>
+        <div class="card-grid">
+            <div class="card">
+                <p class="card-title">Pump: <span id="sliderValue1"></span> &percnt;</p>
+                <p class="switch">
+                    <input type="range" onchange="updateSliderPWM(this)" id="slider1" min="0" max="100" step="1"
+                        value="0" class="slider">
+                </p>
+                <div class="btn-row">
+                    <input type="button" class="btn btn-first" id="setPWM0_1" onclick="setPWM(this, 0)" value="0" />
+                    <input type="button" class="btn" id="setPWM25_1" onclick="setPWM(this, 25)" value="25" />
+                    <input type="button" class="btn" id="setPWM50_1" onclick="setPWM(this, 50)" value="50" />
+                    <input type="button" class="btn" id="setPWM75_1" onclick="setPWM(this, 75)" value="75" />
+                    <input type="button" class="btn" id="setPWM100_1" onclick="setPWM(this, 100)" value="100" />
+                </div>
+            </div>
+            <div class="card">
+                <p class="card-title">Tank Valve: <span id="sliderValue2"></span> &percnt;</p>
+                <p class="switch">
+                    <input type="range" onchange="updateSliderPWM(this)" id="slider2" min="0" max="100" step="1"
+                        value="0" class="slider">
+                </p>
+                <div class="btn-row">
+                    <input type="button" class="btn btn-first" id="setPWM0_2" onclick="setPWM(this, 0)" value="0" />
+                    <input type="button" class="btn" id="setPWM25_2" onclick="setPWM(this, 25)" value="25" />
+                    <input type="button" class="btn" id="setPWM50_2" onclick="setPWM(this, 50)" value="50" />
+                    <input type="button" class="btn" id="setPWM75_2" onclick="setPWM(this, 75)" value="75" />
+                    <input type="button" class="btn" id="setPWM100_2" onclick="setPWM(this, 100)" value="100" />
+                </div>
+            </div>
+            <div class="card">
+                <p class="card-title">Engine Valve: <span id="sliderValue3"></span> &percnt;</p>
+                <p class="switch">
+                    <input type="range" onchange="updateSliderPWM(this)" id="slider3" min="0" max="100" step="1"
+                        value="0" class="slider">
+                </p>
+                <div class="btn-row">
+                    <input type="button" class="btn btn-first" id="setPWM0_3" onclick="setPWM(this, 0)" value="0" />
+                    <input type="button" class="btn" id="setPWM25_3" onclick="setPWM(this, 25)" value="25" />
+                    <input type="button" class="btn" id="setPWM50_3" onclick="setPWM(this, 50)" value="50" />
+                    <input type="button" class="btn" id="setPWM75_3" onclick="setPWM(this, 75)" value="75" />
+                    <input type="button" class="btn" id="setPWM100_3" onclick="setPWM(this, 100)" value="100" />
+                </div>
+            </div>
+            <div class="card">
+                <p class="card-title"> Return Valve: <span id="sliderValue4"></span> &percnt;</p>
+                <p class="switch">
+                    <input type="range" onchange="updateSliderPWM(this)" id="slider4" min="0" max="100" step="1"
+                        value="0" class="slider">
+                </p>
+                <div class="btn-row">
+                    <input type="button" class="btn btn-first" id="setPWM0_4" onclick="setPWM(this, 0)" value="0" />
+                    <input type="button" class="btn" id="setPWM25_4" onclick="setPWM(this, 25)" value="25" />
+                    <input type="button" class="btn" id="setPWM50_4" onclick="setPWM(this, 50)" value="50" />
+                    <input type="button" class="btn" id="setPWM75_4" onclick="setPWM(this, 75)" value="75" />
+                    <input type="button" class="btn" id="setPWM100_4" onclick="setPWM(this, 100)" value="100" />
+                </div>
+            </div>
+            <div class="card">
+                <p class="card-title">Not used: <span id="sliderValue5"></span> &percnt;</p>
+                <p class="switch">
+                    <input type="range" onchange="updateSliderPWM(this)" id="slider5" min="0" max="100" step="1"
+                        value="0" class="slider">
+                </p>
+                <div class="btn-row">
+                    <input type="button" class="btn btn-first" id="setPWM0_5" onclick="setPWM(this, 0)" value="0" />
+                    <input type="button" class="btn" id="setPWM25_5" onclick="setPWM(this, 25)" value="25" />
+                    <input type="button" class="btn" id="setPWM50_5" onclick="setPWM(this, 50)" value="50" />
+                    <input type="button" class="btn" id="setPWM75_5" onclick="setPWM(this, 75)" value="75" />
+                    <input type="button" class="btn" id="setPWM100_5" onclick="setPWM(this, 100)" value="100" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
