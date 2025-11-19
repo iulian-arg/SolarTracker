@@ -7,7 +7,9 @@
 #include <ESPAsyncWebServer.h>
 #include "SPIFFS.h"
 #include <Arduino_JSON.h>
+#include "PositionManager.h"
 
+extern PositionManager *positionManager;
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
@@ -15,17 +17,6 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
 String message = "";
-String sliderValue1 = "0";
-String sliderValue2 = "0";
-String sliderValue3 = "0";
-String sliderValue4 = "0";
-String sliderValue5 = "0";
-
-uint8_t dutyCycle1;
-uint8_t dutyCycle2;
-uint8_t dutyCycle3;
-uint8_t dutyCycle4;
-uint8_t dutyCycle5;
 
 // Json Variable to Hold Slider Values
 JSONVar sliderValues;
@@ -33,12 +24,8 @@ JSONVar sliderValues;
 // Get Slider Values
 String getSliderValues()
 {
-    sliderValues["sliderValue1"] = String(sliderValue1);
-    sliderValues["sliderValue2"] = String(sliderValue2);
-    sliderValues["sliderValue3"] = String(sliderValue3);
-    sliderValues["sliderValue4"] = String(sliderValue4);
-    sliderValues["sliderValue5"] = String(sliderValue5);
-    Serial.println(sliderValues.length());
+    sliderValues["sliderValue1"] = String(0);
+    // Serial.println(sliderValues.length());
 
     String jsonString = JSON.stringify(sliderValues);
     return jsonString;
@@ -71,38 +58,39 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         message = (char *)data;
         auto sliderValue = message.substring(2);
         auto dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 255);
-        Serial.println(dutyCycle);
-        if (message.indexOf("0s") >= 0)
+        Serial.print("message: ");
+        Serial.println(message.c_str());
+        if (message.indexOf("MOVE_RIGHT_down") >= 0)
         {
-            sliderValue1 = sliderValue2 = sliderValue3 = sliderValue4 = sliderValue5 = sliderValue;
-            dutyCycle1 = dutyCycle2 = dutyCycle3 = dutyCycle4 = dutyCycle5 = dutyCycle;
+            positionManager->SetPositioningMode(PositionMode::Manual);
+            positionManager->TryMoveRight();
         }
-        if (message.indexOf("1s") >= 0)
+        else if (message.indexOf("MOVE_RIGHT_up") >= 0)
         {
-            sliderValue1 = sliderValue;
-            dutyCycle1 = dutyCycle;
+            positionManager->ResetMoving();
         }
-        if (message.indexOf("2s") >= 0)
+        else if (message.indexOf("MOVE_LEFT_down") >= 0)
         {
-            sliderValue2 = sliderValue;
-            dutyCycle2 = dutyCycle;
+            positionManager->SetPositioningMode(PositionMode::Manual);
+            positionManager->TryMoveLeft();
         }
-        if (message.indexOf("3s") >= 0)
+        else if (message.indexOf("MOVE_LEFT_up") >= 0)
         {
-            sliderValue3 = sliderValue;
-            dutyCycle3 = dutyCycle;
+            positionManager->ResetMoving();
         }
-        if (message.indexOf("4s") >= 0)
+        else if (message.indexOf("AUTO_MODE") >= 0)
         {
-            sliderValue4 = sliderValue;
-            dutyCycle4 = dutyCycle;
+            positionManager->SetPositioningMode(PositionMode::Automatic);
         }
-        if (message.indexOf("5s") >= 0)
+        else if (message.indexOf("MANUAL_MODE") >= 0)
         {
-            sliderValue5 = sliderValue;
-            dutyCycle5 = dutyCycle;
+            positionManager->SetPositioningMode(PositionMode::Manual);
         }
-        Serial.print(getSliderValues());
+        else if (message.indexOf("RESET") >= 0)
+        {
+            positionManager->ResetMoving();
+        }
+
         notifyClients(getSliderValues());
 
         if (strcmp((char *)data, "getValues") == 0)
@@ -145,6 +133,8 @@ void initWebSocket()
     // Start server
     server.begin();
 }
+
+extern PositionManager *posManager;
 class AsyncWebServerManager
 {
 private:

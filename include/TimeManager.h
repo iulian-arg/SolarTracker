@@ -6,6 +6,7 @@
 #include <time.h>
 // #include <Arduino.h>
 
+extern Config config;
 const char *ntpServer = "pool.ntp.org";
 int gmtOffset_sec = 7200;
 int daylightOffset_sec = 3600;
@@ -16,7 +17,7 @@ class TimeManager
 
 public:
     TimeManager() {}
-    void initTime(Config config)
+    void initTime()
     {
         // Initialize NTP
 

@@ -33,13 +33,6 @@ private:
     BH1750 lightMeter_0;
     BH1750 lightMeter_1;
 
-    void SetupTEMT6K()
-    {
-        // pinMode(TEMT6000_0, INPUT);
-        // pinMode(TEMT6000_1, INPUT);
-        // Serial.println(F("TEMT6000 initialised"));
-    }
-
     void SetupTeperatureSensor()
     {
         sensors.begin();
@@ -120,7 +113,6 @@ private:
 public:
     void SetupSensors()
     {
-        SetupTEMT6K();
         SetupTeperatureSensor();
         SetupBH1750();
     }

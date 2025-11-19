@@ -115,7 +115,7 @@ public:
         cfg.POT_Max_Right_Val = doc["pinSettings"]["POT_Max_Right_Val"].as<uint16_t>();
 
         Serial.println("Config read from doc:");
-        
+        // printConfig(cfg);
         return cfg;
     }
 

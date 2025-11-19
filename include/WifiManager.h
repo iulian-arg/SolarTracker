@@ -25,12 +25,15 @@
         "Asus",
         "18273645"
       ]*/
+
+extern Config config;
+
 class WifiManager
 {
 
 public:
     WifiManager() {}
-    void WifiConnect(Config config)
+    void WifiConnect()
     {
         Serial.println();
 
@@ -41,7 +44,7 @@ public:
             auto ssid = config.wifis[i].ssid;
             auto password = config.wifis[i].password;
             Serial.printf("\n_______connecting to ssid: %s \n", ssid.c_str());
-            WiFi.hostname("fosa");
+            WiFi.hostname("SolarTracker");
             WiFi.begin(ssid, password);
 
             int connAttempts = 0;
@@ -62,7 +65,7 @@ public:
                 Serial.printf("%4d", WiFi.RSSI(i));
                 Serial.print(" | ");
                 Serial.printf("%2d", WiFi.channel(i));
-                Serial.print(" | ");
+                Serial.println(" | ");
                 break;
             }
         }

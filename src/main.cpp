@@ -1,13 +1,4 @@
-// #include <SensorManager.h>
-// #include <BluetoothManager.h>
-// #include <PWMManager.h>
-// #include <analogWrite.h> // This is a library, not a header file
-// #include <WifiManager.h>
-// #include <WebServerManager.h>
-// #include <ButtonLEDManager.h>
-// #include <SPIFFS.h>
-// #include "NimBLEManager.h"
-// #include <ProgramManager.h>
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -20,19 +11,17 @@
 #include "TimeManager.h"
 #include "AsyncWebServerManager.h"
 #include "PositionManager.h"
+#include "Logger.h"
 
 BoardPowerManager *boardPowerManager;
 WifiManager *wifiManager;
 SensorManager *sensorManager;
 ConfigManager *configManager;
 TimeManager *timeManager;
-PositionManager *positioningManager;
+PositionManager *positionManager;
 AsyncWebServerManager *asyncWebServerManager;
-// RelayManager *relayManager;
-// ButtonLEDManager *buttonLEDManager;
-// BtnLEDManager *btnLEDManager;
-// IOManager *ioManager;
 
+static const char* TAG = "SolarTracker";
 ulong lastProgramTimestamp;
 Config config;
 Ticker myTicker;
@@ -42,7 +31,8 @@ void tick();
 void setup()
 {
     Serial.begin(115200);
-
+    esp_log_level_set(TAG, ESP_LOG_DEBUG); 
+    
     boardPowerManager = new BoardPowerManager();
     boardPowerManager->InitBoardPowerManager();
 
@@ -50,18 +40,18 @@ void setup()
     config = configManager->readConfig();
 
     wifiManager = new WifiManager();
-    wifiManager->WifiConnect(config);
+    wifiManager->WifiConnect();
 
     sensorManager = new SensorManager();
     sensorManager->SetupSensors();
 
     timeManager = new TimeManager();
-    timeManager->initTime(config);
+    timeManager->initTime();
 
-    positioningManager = new PositionManager(config, sensorManager);
+    positionManager = new PositionManager();
 
     asyncWebServerManager = new AsyncWebServerManager();
-    asyncWebServerManager->initWebServer();
+    asyncWebServerManager->initWebServer( );
 
     myTicker.attach(1.0, tick);
     // config.POT1_pin_MaxAngl = 35;
@@ -77,25 +67,25 @@ void tick()
 }
 void loop()
 {
-    auto positioningInterval = 
-        positioningManager->GetPositioningMode() == PositionMode::Manual ||
-        positioningManager->GetPositioningMode() == PositionMode::LowLight
-        ? 5 * config.positioningUpdateIntervalMs
-        : config.positioningUpdateIntervalMs;
+    auto positioningInterval =
+        positionManager->GetPositioningMode() == PositionMode::Manual ||
+                positionManager->GetPositioningMode() == PositionMode::LowLight
+            ? 5 * config.positioningUpdateIntervalMs
+            : config.positioningUpdateIntervalMs;
     if (millis() - previousPositioningMillis >= positioningInterval)
     {
         previousPositioningMillis = millis();
 
         Serial.println();
         timeManager->printCurrentTime();
-        positioningManager->UpdatePositioning();
+        positionManager->UpdatePositioning();
     }
 
     if (millis() - previousButtonMillis >= 50)
     {
         previousButtonMillis = millis();
-        positioningManager->MonitorBtnStates();
-        positioningManager->UpdateLEDStates();
+        positionManager->MonitorBtnStates();
+        positionManager->UpdateLEDStates();
         asyncWebServerManager->loopWebServer();
     }
 }

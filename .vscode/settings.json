@@ -7,5 +7,6 @@
         "initializer_list": "cpp",
         "regex": "cpp",
         "utility": "cpp"
-    }
+    },
+    "FSharp.suggestGitignore": false
 }

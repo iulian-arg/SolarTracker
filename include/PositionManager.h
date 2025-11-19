@@ -56,15 +56,12 @@ struct MoveEvent
     MoveDirection direction;
     time_t timestamp;
 };
-// IOManager *ioManager;
 
-// uint8_t queueSize = 30;
-
+extern Config config;
+extern SensorManager *sensorManager;
 class PositionManager
 {
 private:
-    Config config;
-    SensorManager *sensorManager;
     SensorInfo sensorInfo;
     uint8_t previousBtnPressed = 0;
 
@@ -75,15 +72,8 @@ private:
 
 public:
     PositionManager(
-        Config _config,
-        SensorManager *_sensorManager
-        // ,
-        // IOManager *_ioManager
     )
     {
-        config = _config;               // Dynamically allocate and copy the config
-        sensorManager = _sensorManager; // This will use the copy assignment operator
-        // ioManager = _ioManager;   // This will use the copy assignment operator
         SetPositioningMode(PositionMode::Automatic);
         positioningModeChangeQueue.reserve(config.lightTrackingQueueSize);
         positioningModeChangeQueue.push_back({PositionMode::Automatic, time(nullptr)});
@@ -92,8 +82,6 @@ public:
         LuxDiffQueue.reserve(config.lightTrackingQueueSize);
         LuxDiffQueue.push_back(100);
         MoveEventQueue.reserve(config.lightTrackingQueueSize);
-
-        config = _config;
 
         pinMode(config.B1_pin_Auto, INPUT);
         pinMode(config.B2_pin_MoveRight, INPUT);
@@ -208,7 +196,7 @@ public:
             return; // No change in move event
         }
         Serial.println("ResetMoving");
-        // ioManager->ResetRelays();
+        ResetMovement();
         AddMoveEventQueue(MoveDirection::NoMove);
     }
 
@@ -410,6 +398,8 @@ public:
             return;
         }
         AddMoveEventQueue(MoveDirection::MoveLeft);
+        SetRelayState(config.R2_pin_MoveRight, false);
+        delay(100);
         SetRelayState(config.R1_pin_MoveLeft, true);
     }
     void TryMoveRight()
@@ -424,6 +414,8 @@ public:
             return;
         }
         AddMoveEventQueue(MoveDirection::MoveRight);
+        SetRelayState(config.R1_pin_MoveLeft, false);
+        delay(100);
         SetRelayState(config.R2_pin_MoveRight, true);
     }
 

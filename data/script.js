@@ -49,6 +49,12 @@ function setAllValues(element, value) {
   websocket.send("0s" + value);
 }
 
+function sendCommand(element, command) {
+  console.log("Send command: " + command);
+  websocket.send(command);
+}
+
+
 function onMessage(event) {
   console.log(event.data);
   var myObj = JSON.parse(event.data);
