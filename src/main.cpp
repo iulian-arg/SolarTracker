@@ -21,7 +21,7 @@ TimeManager *timeManager;
 PositionManager *positionManager;
 AsyncWebServerManager *asyncWebServerManager;
 
-static const char* TAG = "SolarTracker";
+const char* TAG = "SolarTracker";
 ulong lastProgramTimestamp;
 Config config;
 Ticker myTicker;
@@ -32,7 +32,7 @@ void setup()
 {
     Serial.begin(115200);
     esp_log_level_set(TAG, ESP_LOG_DEBUG); 
-    
+
     boardPowerManager = new BoardPowerManager();
     boardPowerManager->InitBoardPowerManager();
 

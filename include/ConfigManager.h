@@ -4,6 +4,8 @@
 
 #include <ArduinoJson.h>
 #include "SPIFFS.h"
+#include "Logger.h"
+extern const char* TAG ;
 
 struct wifiPairs
 {
@@ -44,34 +46,34 @@ class ConfigManager
 public:
     DynamicJsonDocument GetJsonDocument()
     {
-        Serial.println("Reading file from SPIFFS");
+        Logger::info(TAG, "Reading file from SPIFFS");
         File file;
         if (!SPIFFS.begin(true))
         {
-            Serial.println("An Error has occurred while mounting SPIFFS");
+            Logger::error(TAG, "An Error has occurred while mounting SPIFFS");
             return DynamicJsonDocument(0);
         }
         file = SPIFFS.open(filename, "r+");
         if (!file)
         {
-            Serial.println("Failed to open file for reading");
+            Logger::error(TAG, "Failed to open file for reading");
             return DynamicJsonDocument(0);
         }
         if (!file)
         {
-            Serial.println("Returning default config");
+            Logger::warn(TAG, "Returning default config");
             return DynamicJsonDocument(0);
         }
-        Serial.println("Getting JSON document");
+        Logger::info(TAG, "Getting JSON document");
         DynamicJsonDocument doc(1024);
         DeserializationError error = deserializeJson(doc, file);
         if (error)
         {
-            Serial.print(F("deserializeJson() failed: "));
-            Serial.println(error.f_str());
+            Logger::error(TAG, "deserializeJson() failed: ");
+            Logger::error(TAG, error.c_str());
         }
         file.close();
-        Serial.println("File closed.");
+        Logger::info(TAG, "File closed.");
         return doc;
     }
 
@@ -96,7 +98,7 @@ public:
             auto pass = v[1].as<const char *>();
             cfg.wifis[i].ssid = ssid;
             cfg.wifis[i].password = pass;
-            Serial.printf("\n __wifis: %s __ %s", ssid, pass);
+            Logger::info(TAG, "\n __wifis: %s __ %s", ssid, pass);
             i++;
         }
         cfg.RetryCount = doc["wifis"]["RetryCount"].as<uint8_t>();
@@ -114,8 +116,8 @@ public:
         cfg.POT_Max_Left_Val = doc["pinSettings"]["POT_Max_Left_Val"].as<uint16_t>();
         cfg.POT_Max_Right_Val = doc["pinSettings"]["POT_Max_Right_Val"].as<uint16_t>();
 
-        Serial.println("Config read from doc:");
-        // printConfig(cfg);
+        Logger::info(TAG, "Config read from doc:");
+
         return cfg;
     }
 
@@ -126,14 +128,14 @@ public:
         DynamicJsonDocument doc = GetJsonDocument();
         if (doc.isNull())
         {
-            Serial.println("Returning default config");
+            Logger::warn(TAG, "Returning default config");
             return config;
         }
         config = ReadConfigFromDoc(doc);
 
-        Serial.println("printJson");
+        Logger::info(TAG, "printJson");
         printJson(doc);
-        Serial.println("end printJson");
+        Logger::info(TAG, "end printJson");
 
         return config;
     }
@@ -141,20 +143,24 @@ public:
     void printJson(DynamicJsonDocument doc)
     {
         serializeJsonPretty(doc, Serial);
-        Serial.println();
+        void *buffer = malloc(2048);
+        size_t size = serializeJsonPretty(doc, buffer, 2048);
+        const char *charBuffer = static_cast<const char *>(buffer);
+        Logger::info(TAG, charBuffer);
+        Logger::info(TAG, "Serialized JSON printed to Serial");
     }
 
     void WriteToSPIFFS(Config config)
     {
         if (!SPIFFS.begin(true))
         {
-            Serial.println("An Error has occurred while mounting SPIFFS");
+            Logger::error(TAG, "An Error has occurred while mounting SPIFFS");
             return;
         }
         File file = SPIFFS.open(filename, "w+");
         if (!file)
         {
-            Serial.println("Failed to open file for writing");
+            Logger::error(TAG, "Failed to open file for writing");
             return;
         }
 
@@ -169,14 +175,14 @@ public:
         }
 
         serializeJsonPretty(doc, Serial);
-        Serial.println();
+        Logger::info(TAG, "Serialized JSON printed to Serial");
 
         if (serializeJsonPretty(doc, file) == 0)
         {
-            Serial.println(F("Failed to write to file"));
+            Logger::error(TAG, "Failed to write to file");
         }
         file.close();
-        Serial.println("File closed.");
+        Logger::info(TAG, "File closed.");
     }
 };
 #endif

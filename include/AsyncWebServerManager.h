@@ -80,10 +80,12 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         }
         else if (message.indexOf("AUTO_MODE") >= 0)
         {
+            positionManager->ResetMoving();
             positionManager->SetPositioningMode(PositionMode::Automatic);
         }
         else if (message.indexOf("MANUAL_MODE") >= 0)
         {
+            positionManager->ResetMoving();
             positionManager->SetPositioningMode(PositionMode::Manual);
         }
         else if (message.indexOf("RESET") >= 0)

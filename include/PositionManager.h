@@ -424,6 +424,7 @@ public:
         Serial.println("Resetting Movement");
         SetRelayState(config.R1_pin_MoveLeft, false);
         SetRelayState(config.R2_pin_MoveRight, false);
+        delay(50);
     }
 };
 #endif
