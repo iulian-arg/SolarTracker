@@ -21,7 +21,7 @@ TimeManager *timeManager;
 PositionManager *positionManager;
 AsyncWebServerManager *asyncWebServerManager;
 
-const char* TAG = "SolarTracker";
+const char* TAG = "ST";
 ulong lastProgramTimestamp;
 Config config;
 Ticker myTicker;
@@ -77,7 +77,7 @@ void loop()
         previousPositioningMillis = millis();
 
         Serial.println();
-        timeManager->printCurrentTime();
+        // timeManager->printCurrentTime();
         positionManager->UpdatePositioning();
     }
 

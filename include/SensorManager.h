@@ -9,6 +9,9 @@
 #include <BH1750.h>
 #include <Wire.h>
 
+#include "Logger.h"
+extern const char *TAG;
+
 // #define TEMT6000_0 32 // PIN on TEMT6000
 // #define TEMT6000_1 33
 
@@ -43,19 +46,19 @@ private:
         Wire.begin();
         if (lightMeter_0.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23))
         {
-            Serial.println(F("BH1750_0 initialised"));
+            Logger::info(TAG, "BH1750_0 initialised");
         }
         else
         {
-            Serial.println(F("Error initialising BH1750_0"));
+            Logger::info(TAG, "Error initialising BH1750_0");
         }
         if (lightMeter_1.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x5C))
         {
-            Serial.println(F("BH1750_1 initialised"));
+            Logger::info(TAG, "BH1750_1 initialised");
         }
         else
         {
-            Serial.println(F("Error initialising BH1750_1"));
+            Logger::info(TAG, "Error initialising BH1750_1");
         }
     }
 
@@ -83,33 +86,13 @@ private:
         return lux;
     }
 
-    void ReadTemp()
-    {
-        sensors.requestTemperatures();
-        float temperatureC = sensors.getTempCByIndex(0);
-        Serial.print(temperatureC);
-        Serial.println("ºC");
-        // delay(5);
-    }
     float GetSensorTemperature()
     {
         sensors.requestTemperatures();
         float temperatureC = sensors.getTempCByIndex(0);
         return temperatureC;
     }
-    /**
-        int ReadTEMT6K_0()
-        {
-            int lightLevel = analogRead(TEMT6000_0);
-            return lightLevel;
-        }
-
-        int ReadTEMT6K_1()
-        {
-            int lightLevel = analogRead(TEMT6000_1);
-            return lightLevel;
-        }
-    */
+    
 public:
     void SetupSensors()
     {
@@ -129,8 +112,8 @@ public:
         sensorInfo.luxDiffPercent =
             sensorInfo.lux_0 >= sensorInfo.lux_1 ? -sensorInfo.lux_1 / sensorInfo.lux_0 * 100.0
                                                  : sensorInfo.lux_0 / sensorInfo.lux_1 * 100.0;
-        Serial.println("");
-        Serial.printf("<0, 1, avg, diff, temp>: <%.2f, %.2f, %.2f, %.2f, %.2f>\n",
+       
+        Logger::info(TAG, "<0, 1, avg, diff, temp>: <%.2f, %.2f, %.2f, %.2f, %.2fºC>",
                       sensorInfo.lux_0,
                       sensorInfo.lux_1,
                       sensorInfo.luxAverage,

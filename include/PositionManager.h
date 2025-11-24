@@ -71,8 +71,7 @@ private:
     std::vector<MoveEvent> MoveEventQueue = std::vector<MoveEvent>();
 
 public:
-    PositionManager(
-    )
+    PositionManager()
     {
         SetPositioningMode(PositionMode::Automatic);
         positioningModeChangeQueue.reserve(config.lightTrackingQueueSize);
@@ -115,8 +114,6 @@ public:
         {
             LuxAVGQueue.erase(LuxAVGQueue.begin());
         }
-        // Serial.printf("Lux Average: %.2f, Lux Difference: %.2f\n",
-        //     luxAVGCurrent, luxDiffCurrent);
     }
 
     MoveDirection CheckPositionChangeNeeded()
@@ -160,13 +157,10 @@ public:
             MoveDirection positionChange = CheckPositionChangeNeeded();
             if (positionChange == MoveDirection::MoveRight)
             {
-
-                // Serial.println("UpdatePositioning: Move Right Triggered");
                 TryMoveRight();
             }
             else if (positionChange == MoveDirection::MoveLeft)
             {
-                // Serial.println("UpdatePositioning: Move Left Triggered");
                 TryMoveLeft();
             }
             else
@@ -184,7 +178,7 @@ public:
         }
         else
         {
-            Serial.println("Unknown positioning mode.");
+            Logger::info(TAG, "Unknown positioning mode.");
         }
     }
 
@@ -195,7 +189,7 @@ public:
         {
             return; // No change in move event
         }
-        Serial.println("ResetMoving");
+        Logger::info(TAG, "ResetMoving");
         ResetMovement();
         AddMoveEventQueue(MoveDirection::NoMove);
     }
@@ -216,22 +210,23 @@ public:
 
     void PrintPositioningMode()
     {
-        Serial.print("Current Positioning Mode: ");
+        String msg = "Current Positioning Mode: ";
         switch (positioningModeChangeQueue.back().mode)
         {
         case PositionMode::Manual:
-            Serial.println("MANUAL");
+            msg += "MANUAL";
             break;
         case PositionMode::Automatic:
-            Serial.println("AUTOMATIC");
+            msg += "AUTOMATIC";
             break;
         case PositionMode::LowLight:
-            Serial.println("LOW LIGHT");
+            msg += "LOW LIGHT";
             break;
         default:
-            Serial.println("UNKNOWN");
+            msg += "UNKNOWN";
             break;
         }
+        Logger::info(TAG, msg.c_str());
     }
 
     void SetPositioningMode(PositionMode mode)
@@ -239,25 +234,25 @@ public:
         if (positioningModeChangeQueue.size() > 0 &&
             positioningModeChangeQueue.back().mode == mode)
         {
-            // Serial.println("Positioning mode unchanged.");
             return; // No change in mode
         }
-        Serial.print("Changing Positioning Mode from ");
+        String msg = "Changing Positioning Mode from ";
         if (positioningModeChangeQueue.size() > 0)
         {
-            Serial.print(GetPositioningModeString(positioningModeChangeQueue.back()));
+            msg += GetPositioningModeString(positioningModeChangeQueue.back());
         }
         else
         {
-            Serial.print("NONE");
+            msg += "NONE";
         }
-        Serial.print("to: ");
+        msg += " to: ";
         positioningModeChangeQueue.push_back({mode, time(nullptr)});
         if (positioningModeChangeQueue.size() > config.lightTrackingQueueSize)
         {
             positioningModeChangeQueue.erase(positioningModeChangeQueue.begin());
         }
-        Serial.println(GetPositioningModeString(positioningModeChangeQueue.back()));
+        msg += GetPositioningModeString(positioningModeChangeQueue.back());
+        Logger::info(TAG, msg.c_str());
     }
 
     String GetPositioningModeString(PositioningModeChange modeChange)
@@ -265,13 +260,13 @@ public:
         switch (modeChange.mode)
         {
         case PositionMode::Manual:
-            return "MANUAL " + String(modeChange.timestamp);
+            return "MANUAL ";
         case PositionMode::Automatic:
-            return "AUTOMATIC " + String(modeChange.timestamp);
+            return "AUTOMATIC ";
         case PositionMode::LowLight:
-            return "LOW LIGHT " + String(modeChange.timestamp);
+            return "LOW LIGHT ";
         default:
-            return "UNKNOWN " + String(modeChange.timestamp);
+            return "UNKNOWN ";
         }
     }
 
@@ -282,18 +277,18 @@ public:
 
     void PrintQueues()
     {
-        Serial.print("-- DIFF :");
+        String msg = "-- DIFF :";
         for (const float &entry : LuxDiffQueue)
         {
-            Serial.printf("%.2f  ", entry);
+            msg += String(" %.2f  ", entry);
         }
-        Serial.println();
-        Serial.print("-- AVG :");
+        Logger::info(TAG, msg.c_str());
+        msg = "-- AVG :";
         for (const float &entry : LuxAVGQueue)
         {
-            Serial.printf("%.2f ", entry);
+            msg += String(" %.2f  ", entry);
         }
-        Serial.println();
+        Logger::info(TAG, msg.c_str());
     }
 
     void CheckForLowLight()
@@ -330,7 +325,6 @@ public:
             previousBtnPressed != config.B2_pin_MoveRight)
         {
             previousBtnPressed = config.B2_pin_MoveRight;
-            // Serial.println("Move Right Btn _pressed");
             SetPositioningMode(PositionMode::Manual);
             TryMoveRight();
         }
@@ -338,7 +332,6 @@ public:
                  previousBtnPressed != config.B3_pin_MoveLeft)
         {
             previousBtnPressed = config.B3_pin_MoveLeft;
-            // Serial.println("Move Left Btn _pressed");
             SetPositioningMode(PositionMode::Manual);
             TryMoveLeft();
         }
@@ -346,7 +339,6 @@ public:
                  previousBtnPressed != config.B1_pin_Auto)
         {
             previousBtnPressed = config.B1_pin_Auto;
-            // Serial.println("Automatic Mode Btn _pressed");
             if (GetPositioningMode() == PositionMode::Manual)
             {
                 SetPositioningMode(PositionMode::Automatic);
@@ -357,7 +349,7 @@ public:
                  b2_pin_MoveRight_state == _notPressed &&
                  b3_pin_MoveLeft_state == _notPressed)
         {
-            Serial.println("Btn Released, Resetting Movement");
+            Logger::info(TAG, "Btn Released, Resetting Movement");
             previousBtnPressed = 0;
             ResetMoving();
         }
@@ -389,39 +381,44 @@ public:
 
     void TryMoveLeft()
     {
-        Serial.println("Move Left Triggered");
-        Serial.printf("\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Left_Val, analogRead(config.POT1_pin_MaxAngl));
+        Logger::info(TAG, "Move Left Triggered");
+        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Left_Val, analogRead(config.POT1_pin_MaxAngl));
         if (analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_Left_Val)
         {
             ResetMovement();
-            Serial.println("MAX LEFT. Reset movements.");
+            Logger::info(TAG, "MAX LEFT. Reset movements.");
             return;
         }
         AddMoveEventQueue(MoveDirection::MoveLeft);
         SetRelayState(config.R2_pin_MoveRight, false);
         delay(100);
+        SetRelayState(config.R0_pin_Power, true);
+        delay(100);
         SetRelayState(config.R1_pin_MoveLeft, true);
     }
     void TryMoveRight()
     {
-        Serial.println("Move Right Triggered");
-        Serial.printf("\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Right_Val, analogRead(config.POT1_pin_MaxAngl));
+        Logger::info(TAG, "Move Right Triggered");
+        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Right_Val, analogRead(config.POT1_pin_MaxAngl));
 
         if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_Right_Val)
         {
             ResetMovement();
-            Serial.println("MAX RIGHT. Reset movements.");
+            Logger::info(TAG, "MAX RIGHT. Reset movements.");
             return;
         }
         AddMoveEventQueue(MoveDirection::MoveRight);
         SetRelayState(config.R1_pin_MoveLeft, false);
+        delay(100);
+        SetRelayState(config.R0_pin_Power, true);
         delay(100);
         SetRelayState(config.R2_pin_MoveRight, true);
     }
 
     void ResetMovement()
     {
-        Serial.println("Resetting Movement");
+        Logger::info(TAG, "Resetting Movement");
+        SetRelayState(config.R0_pin_Power, false);
         SetRelayState(config.R1_pin_MoveLeft, false);
         SetRelayState(config.R2_pin_MoveRight, false);
         delay(50);

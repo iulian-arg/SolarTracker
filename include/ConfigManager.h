@@ -5,7 +5,7 @@
 #include <ArduinoJson.h>
 #include "SPIFFS.h"
 #include "Logger.h"
-extern const char* TAG ;
+extern const char *TAG;
 
 struct wifiPairs
 {
