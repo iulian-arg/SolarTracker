@@ -8,6 +8,9 @@
 #include "SPIFFS.h"
 #include <Arduino_JSON.h>
 #include "PositionManager.h"
+#include "Logger.h"
+
+extern const char *TAG;
 
 extern PositionManager *positionManager;
 // Create AsyncWebServer object on port 80
@@ -25,7 +28,6 @@ JSONVar sliderValues;
 String getSliderValues()
 {
     sliderValues["sliderValue1"] = String(0);
-    // Serial.println(sliderValues.length());
 
     String jsonString = JSON.stringify(sliderValues);
     return jsonString;
@@ -36,11 +38,11 @@ void initFS()
 {
     if (!SPIFFS.begin())
     {
-        Serial.println("An error has occurred while mounting SPIFFS");
+        Logger::error(TAG, "An error has occurred while mounting SPIFFS");
     }
     else
     {
-        Serial.println("SPIFFS mounted successfully");
+        Logger::info(TAG, "SPIFFS mounted successfully");
     }
 }
 
@@ -58,8 +60,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         message = (char *)data;
         auto sliderValue = message.substring(2);
         auto dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 255);
-        Serial.print("message: ");
-        Serial.println(message.c_str());
+        Logger::info(TAG, "WEB Socket message: %s", message.c_str());
         if (message.indexOf("MOVE_RIGHT_down") >= 0)
         {
             positionManager->SetPositioningMode(PositionMode::Manual);
@@ -107,10 +108,10 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     switch (type)
     {
     case WS_EVT_CONNECT:
-        Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+        Logger::info(TAG, "WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
         break;
     case WS_EVT_DISCONNECT:
-        Serial.printf("WebSocket client #%u disconnected\n", client->id());
+        Logger::info(TAG, "WebSocket client #%u disconnected\n", client->id());
         break;
     case WS_EVT_DATA:
         handleWebSocketMessage(arg, data, len);

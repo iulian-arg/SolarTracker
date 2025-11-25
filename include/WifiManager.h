@@ -3,7 +3,51 @@
 #define WifiManager_H
 
 #include <WiFi.h>
+#include "ConfigManager.h"
+#include "Logger.h"
 
+extern const char *TAG;
+
+extern Config config;
+
+class WifiManager
+{
+
+public:
+  WifiManager() {}
+  void WifiConnect()
+  {
+    for (int i = 0; i <= 1; i++)
+    {
+      auto ssid = config.wifis[i].ssid;
+      auto password = config.wifis[i].password;
+      Logger::info(TAG, "--connecting to ssid: %s \n", ssid.c_str());
+      WiFi.hostname("SolarTracker");
+      WiFi.begin(ssid, password);
+
+      int connAttempts = 0;
+      while (WiFi.status() != WL_CONNECTED && connAttempts < config.RetryCount)
+      {
+        Logger::info(TAG, ".%d ", WiFi.status());
+        connAttempts++;
+        delay(config.RetryDelay);
+      }
+
+      if (WiFi.status() == WL_CONNECTED)
+      {
+        Logger::info(TAG, "WiFi connected");
+        Logger::info(TAG, "IP address:  %s", WiFi.localIP().toString().c_str());
+        Logger::info(TAG, "MAC address: %s", WiFi.macAddress().c_str());
+        break;
+      }
+    }
+    if (WiFi.status() != WL_CONNECTED)
+    {
+      Logger::error(TAG, "Failed to connect to WiFi");
+    }
+  }
+};
+#endif
 // const char *ssid = "TP-Link_22F4";
 // const char *password = "14756450";
 
@@ -25,54 +69,3 @@
         "Asus",
         "18273645"
       ]*/
-
-extern Config config;
-
-class WifiManager
-{
-
-public:
-    WifiManager() {}
-    void WifiConnect()
-    {
-        Serial.println();
-
-        // Serial.printf("Default hostname: %s\n", WiFi.hostname().c_str());
-        for (int i = 0; i <= 1; i++)
-        {
-            Serial.println();
-            auto ssid = config.wifis[i].ssid;
-            auto password = config.wifis[i].password;
-            Serial.printf("\n_______connecting to ssid: %s \n", ssid.c_str());
-            WiFi.hostname("SolarTracker");
-            WiFi.begin(ssid, password);
-
-            int connAttempts = 0;
-            while (WiFi.status() != WL_CONNECTED && connAttempts < config.RetryCount)
-            {
-                Serial.printf(".%d ", WiFi.status());
-                connAttempts++;
-                delay(config.RetryDelay);
-            }
-
-            if (WiFi.status() == WL_CONNECTED)
-            {
-                Serial.println("WiFi connected");
-                Serial.println(WiFi.localIP());
-                Serial.println(WiFi.macAddress());
-                Serial.printf("%-32.32s", WiFi.SSID(i).c_str());
-                Serial.print(" | ");
-                Serial.printf("%4d", WiFi.RSSI(i));
-                Serial.print(" | ");
-                Serial.printf("%2d", WiFi.channel(i));
-                Serial.println(" | ");
-                break;
-            }
-        }
-        if (WiFi.status() != WL_CONNECTED)
-        {
-            Serial.println("Failed to connect to WiFi");
-        }
-    }
-};
-#endif

@@ -8,9 +8,11 @@
 
 #include <BH1750.h>
 #include <Wire.h>
+#include "ConfigManager.h"
 
 #include "Logger.h"
 extern const char *TAG;
+extern Config config;
 
 // #define TEMT6000_0 32 // PIN on TEMT6000
 // #define TEMT6000_1 33
@@ -28,6 +30,7 @@ struct SensorInfo
     float lux_1;
     float luxAverage;
     float luxDiffPercent;
+    int angleSensorValue;
 };
 
 class SensorManager
@@ -50,7 +53,7 @@ private:
         }
         else
         {
-            Logger::info(TAG, "Error initialising BH1750_0");
+            Logger::error(TAG, "Error initialising BH1750_0");
         }
         if (lightMeter_1.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x5C))
         {
@@ -58,7 +61,7 @@ private:
         }
         else
         {
-            Logger::info(TAG, "Error initialising BH1750_1");
+            Logger::error(TAG, "Error initialising BH1750_1");
         }
     }
 
@@ -92,7 +95,13 @@ private:
         float temperatureC = sensors.getTempCByIndex(0);
         return temperatureC;
     }
-    
+
+    int ReadAngleSensor()
+    {
+        int angleVal = analogRead(config.POT1_pin_MaxAngl);
+        return angleVal;
+    }
+
 public:
     void SetupSensors()
     {
@@ -104,6 +113,7 @@ public:
     {
         SensorInfo sensorInfo;
         sensorInfo.temperatureC = GetSensorTemperature();
+        sensorInfo.angleSensorValue = ReadAngleSensor();
         sensorInfo.lux_0 = ReadBH1750_0();
         sensorInfo.lux_0 = sensorInfo.lux_0 <= 0 ? 0.1 : sensorInfo.lux_0;
         sensorInfo.lux_1 = ReadBH1750_1();
@@ -112,13 +122,13 @@ public:
         sensorInfo.luxDiffPercent =
             sensorInfo.lux_0 >= sensorInfo.lux_1 ? -sensorInfo.lux_1 / sensorInfo.lux_0 * 100.0
                                                  : sensorInfo.lux_0 / sensorInfo.lux_1 * 100.0;
-       
-        Logger::info(TAG, "<0, 1, avg, diff, temp>: <%.2f, %.2f, %.2f, %.2f, %.2fºC>",
-                      sensorInfo.lux_0,
-                      sensorInfo.lux_1,
-                      sensorInfo.luxAverage,
-                      sensorInfo.luxDiffPercent,
-                      sensorInfo.temperatureC);
+
+        Logger::info(TAG, "<0, 1, angle, diff, temp>: <%.2f, %.2f, %d, %.2f, %.2fºC>",
+                     sensorInfo.lux_0,
+                     sensorInfo.lux_1,
+                     sensorInfo.angleSensorValue,
+                     sensorInfo.luxDiffPercent,
+                     sensorInfo.temperatureC);
         // sensorInfo.luxDiffPercent =GetLuxDiff();
         return sensorInfo;
     }
