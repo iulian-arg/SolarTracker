@@ -17,17 +17,17 @@ struct Config
     uint16_t RetryDelay;
     uint8_t RetryCount;
     String ntpServer;
-    uint8_t R1_pin_MoveLeft;
-    uint8_t R2_pin_MoveRight;
+    uint8_t R1_pin_MoveSouth;
+    uint8_t R2_pin_MoveNorth;
     uint8_t R3_pin;
     uint8_t POT1_pin_MaxAngl;
     uint8_t R0_pin_Power;
     uint8_t B1_pin_Auto;
-    uint8_t B2_pin_MoveRight;
-    uint8_t B3_pin_MoveLeft;
+    uint8_t B2_pin_MoveNorth;
+    uint8_t B3_pin_MoveSouth;
     uint8_t LED1_pin_Auto;
-    uint16_t POT_Max_Left_Val;
-    uint16_t POT_Max_Right_Val;
+    uint16_t POT_Max_South_Val;
+    uint16_t POT_Max_North_Val;
     uint16_t ledBlinkIntervalMs;
     uint16_t ledBlinkDurationMs;
 
@@ -104,17 +104,17 @@ public:
         cfg.RetryCount = doc["wifis"]["RetryCount"].as<uint8_t>();
         cfg.RetryDelay = doc["wifis"]["RetryDelay"].as<uint16_t>();
 
-        cfg.R1_pin_MoveLeft = doc["pinSettings"]["R1_pin_MoveLeft"].as<uint8_t>();
-        cfg.R2_pin_MoveRight = doc["pinSettings"]["R2_pin_MoveRight"].as<uint8_t>();
+        cfg.R1_pin_MoveSouth = doc["pinSettings"]["R1_pin_MoveSouth"].as<uint8_t>();
+        cfg.R2_pin_MoveNorth = doc["pinSettings"]["R2_pin_MoveNorth"].as<uint8_t>();
         cfg.R3_pin = doc["pinSettings"]["R3_pin"].as<uint8_t>();
         cfg.POT1_pin_MaxAngl = doc["pinSettings"]["POT1_pin_MaxAngl"].as<uint8_t>();
         cfg.R0_pin_Power = doc["pinSettings"]["R0_pin_Power"].as<uint8_t>();
         cfg.B1_pin_Auto = doc["pinSettings"]["B1_pin_Auto"].as<uint8_t>();
-        cfg.B2_pin_MoveRight = doc["pinSettings"]["B2_pin_MoveRight"].as<uint8_t>();
-        cfg.B3_pin_MoveLeft = doc["pinSettings"]["B3_pin_MoveLeft"].as<uint8_t>();
+        cfg.B2_pin_MoveNorth = doc["pinSettings"]["B2_pin_MoveNorth"].as<uint8_t>();
+        cfg.B3_pin_MoveSouth = doc["pinSettings"]["B3_pin_MoveSouth"].as<uint8_t>();
         cfg.LED1_pin_Auto = doc["pinSettings"]["LED1_pin_Auto"].as<uint8_t>();
-        cfg.POT_Max_Left_Val = doc["pinSettings"]["POT_Max_Left_Val"].as<uint16_t>();
-        cfg.POT_Max_Right_Val = doc["pinSettings"]["POT_Max_Right_Val"].as<uint16_t>();
+        cfg.POT_Max_South_Val = doc["pinSettings"]["POT_Max_South_Val"].as<uint16_t>();
+        cfg.POT_Max_North_Val = doc["pinSettings"]["POT_Max_North_Val"].as<uint16_t>();
 
         Logger::info(TAG, "Config read from doc:");
 

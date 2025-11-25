@@ -24,12 +24,12 @@ public:
         configTime(config.gmtOffset_sec, config.daylightOffset_sec, config.ntpServer.c_str());
         if (!getLocalTime(&timeinfo))
         {
-            Logger::error(TAG, "Failed to obtain time from: %c", config.ntpServer.c_str());
+            Logger::error(TAG, "Failed to obtain time from: %s", config.ntpServer.c_str());
             return;
         }
         else
         {
-            Logger::info(TAG, "Time obtained from: %c", config.ntpServer.c_str());
+            Logger::info(TAG, "Time obtained from: %s", config.ntpServer.c_str());
         }
         // printCurrentTime();
     }

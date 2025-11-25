@@ -61,21 +61,21 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         auto sliderValue = message.substring(2);
         auto dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 255);
         Logger::info(TAG, "WEB Socket message: %s", message.c_str());
-        if (message.indexOf("MOVE_RIGHT_down") >= 0)
+        if (message.indexOf("MOVE_NORTH_down") >= 0)
         {
             positionManager->SetPositioningMode(PositionMode::Manual);
-            positionManager->TryMoveRight();
+            positionManager->TryMoveNorth();
         }
-        else if (message.indexOf("MOVE_RIGHT_up") >= 0)
+        else if (message.indexOf("MOVE_NORTH_up") >= 0)
         {
             positionManager->ResetMoving();
         }
-        else if (message.indexOf("MOVE_LEFT_down") >= 0)
+        else if (message.indexOf("MOVE_SOUTH_down") >= 0)
         {
             positionManager->SetPositioningMode(PositionMode::Manual);
-            positionManager->TryMoveLeft();
+            positionManager->TryMoveSouth();
         }
-        else if (message.indexOf("MOVE_LEFT_up") >= 0)
+        else if (message.indexOf("MOVE_SOUTH_up") >= 0)
         {
             positionManager->ResetMoving();
         }

@@ -28,8 +28,8 @@ enum BtnState
 enum BtnCommand
 {
     _none,
-    _moveRight,
-    _moveLeft,
+    _moveNorth,
+    _moveSouth,
     _manualMode,
     _automaticMode,
 };
@@ -42,9 +42,9 @@ enum PositionMode
 };
 enum MoveDirection
 {
-    MoveLeft = -1,
+    MoveSouth = -1,
     NoMove = 0,
-    MoveRight = 1
+    MoveNorth = 1
 };
 struct PositioningModeChange
 {
@@ -83,20 +83,20 @@ public:
         MoveEventQueue.reserve(config.lightTrackingQueueSize);
 
         pinMode(config.B1_pin_Auto, INPUT);
-        pinMode(config.B2_pin_MoveRight, INPUT);
-        pinMode(config.B3_pin_MoveLeft, INPUT);
+        pinMode(config.B2_pin_MoveNorth, INPUT);
+        pinMode(config.B3_pin_MoveSouth, INPUT);
         // pinMode(config.LED1_pin_Auto, OUTPUT);
         // digitalWrite(config.LED1_pin_Auto, LOW);
 
         pinMode(config.R0_pin_Power, OUTPUT);
-        pinMode(config.R1_pin_MoveLeft, OUTPUT);
-        pinMode(config.R2_pin_MoveRight, OUTPUT);
+        pinMode(config.R1_pin_MoveSouth, OUTPUT);
+        pinMode(config.R2_pin_MoveNorth, OUTPUT);
         // pinMode(config.R3_pin, OUTPUT);
         pinMode(config.POT1_pin_MaxAngl, INPUT);
 
         SetRelayState(config.R0_pin_Power, false);
-        SetRelayState(config.R1_pin_MoveLeft, false);
-        SetRelayState(config.R2_pin_MoveRight, false);
+        SetRelayState(config.R1_pin_MoveSouth, false);
+        SetRelayState(config.R2_pin_MoveNorth, false);
         // SetRelayState(config.R3_pin, false);
     }
 
@@ -135,11 +135,11 @@ public:
             }
             if (positiveCount == LuxDiffQueue.size())
             {
-                return MoveDirection::MoveRight;
+                return MoveDirection::MoveNorth;
             }
             else if (negativeCount == LuxDiffQueue.size())
             {
-                return MoveDirection::MoveLeft;
+                return MoveDirection::MoveSouth;
             }
         }
         return MoveDirection::NoMove;
@@ -155,13 +155,13 @@ public:
         if (currentMode == PositionMode::Automatic)
         {
             MoveDirection positionChange = CheckPositionChangeNeeded();
-            if (positionChange == MoveDirection::MoveRight)
+            if (positionChange == MoveDirection::MoveNorth)
             {
-                TryMoveRight();
+                TryMoveNorth();
             }
-            else if (positionChange == MoveDirection::MoveLeft)
+            else if (positionChange == MoveDirection::MoveSouth)
             {
-                TryMoveLeft();
+                TryMoveSouth();
             }
             else
             {
@@ -318,22 +318,22 @@ public:
     void MonitorBtnStates()
     {
         BtnState b1_pin_Auto_state = digitalRead(config.B1_pin_Auto) == HIGH ? _pressed : _notPressed;
-        BtnState b2_pin_MoveRight_state = digitalRead(config.B2_pin_MoveRight) == HIGH ? _pressed : _notPressed;
-        BtnState b3_pin_MoveLeft_state = digitalRead(config.B3_pin_MoveLeft) == HIGH ? _pressed : _notPressed;
+        BtnState B2_pin_MoveNorth_state = digitalRead(config.B2_pin_MoveNorth) == HIGH ? _pressed : _notPressed;
+        BtnState B3_pin_MoveSouth_state = digitalRead(config.B3_pin_MoveSouth) == HIGH ? _pressed : _notPressed;
 
-        if (b2_pin_MoveRight_state == _pressed &&
-            previousBtnPressed != config.B2_pin_MoveRight)
+        if (B2_pin_MoveNorth_state == _pressed &&
+            previousBtnPressed != config.B2_pin_MoveNorth)
         {
-            previousBtnPressed = config.B2_pin_MoveRight;
+            previousBtnPressed = config.B2_pin_MoveNorth;
             SetPositioningMode(PositionMode::Manual);
-            TryMoveRight();
+            TryMoveNorth();
         }
-        else if (b3_pin_MoveLeft_state == _pressed &&
-                 previousBtnPressed != config.B3_pin_MoveLeft)
+        else if (B3_pin_MoveSouth_state == _pressed &&
+                 previousBtnPressed != config.B3_pin_MoveSouth)
         {
-            previousBtnPressed = config.B3_pin_MoveLeft;
+            previousBtnPressed = config.B3_pin_MoveSouth;
             SetPositioningMode(PositionMode::Manual);
-            TryMoveLeft();
+            TryMoveSouth();
         }
         else if (b1_pin_Auto_state == _pressed &&
                  previousBtnPressed != config.B1_pin_Auto)
@@ -346,8 +346,8 @@ public:
         }
         else if (previousBtnPressed != 0 &&
                  b1_pin_Auto_state == _notPressed &&
-                 b2_pin_MoveRight_state == _notPressed &&
-                 b3_pin_MoveLeft_state == _notPressed)
+                 B2_pin_MoveNorth_state == _notPressed &&
+                 B3_pin_MoveSouth_state == _notPressed)
         {
             Logger::info(TAG, "Btn Released, Resetting Movement");
             previousBtnPressed = 0;
@@ -379,48 +379,48 @@ public:
         digitalWrite(relayPin, state ? LOW : HIGH);
     }
 
-    void TryMoveLeft()
+    void TryMoveSouth()
     {
-        Logger::info(TAG, "Move Left Triggered");
-        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Left_Val, analogRead(config.POT1_pin_MaxAngl));
-        if (analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_Left_Val)
+        Logger::info(TAG, "Move South Triggered");
+        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_South_Val, analogRead(config.POT1_pin_MaxAngl));
+        if (analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_South_Val)
         {
             ResetMovement();
-            Logger::info(TAG, "MAX LEFT. Reset movements.");
+            Logger::info(TAG, "MAX SOUTH. Reset movements.");
             return;
         }
-        AddMoveEventQueue(MoveDirection::MoveLeft);
-        SetRelayState(config.R2_pin_MoveRight, false);
+        AddMoveEventQueue(MoveDirection::MoveSouth);
+        SetRelayState(config.R2_pin_MoveNorth, false);
         delay(100);
         SetRelayState(config.R0_pin_Power, true);
         delay(100);
-        SetRelayState(config.R1_pin_MoveLeft, true);
+        SetRelayState(config.R1_pin_MoveSouth, true);
     }
-    void TryMoveRight()
+    void TryMoveNorth()
     {
-        Logger::info(TAG, "Move Right Triggered");
-        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Right_Val, analogRead(config.POT1_pin_MaxAngl));
+        Logger::info(TAG, "Move North Triggered");
+        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_North_Val, analogRead(config.POT1_pin_MaxAngl));
 
-        if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_Right_Val)
+        if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val)
         {
             ResetMovement();
-            Logger::info(TAG, "MAX RIGHT. Reset movements.");
+            Logger::info(TAG, "MAX NORTH. Reset movements.");
             return;
         }
-        AddMoveEventQueue(MoveDirection::MoveRight);
-        SetRelayState(config.R1_pin_MoveLeft, false);
+        AddMoveEventQueue(MoveDirection::MoveNorth);
+        SetRelayState(config.R1_pin_MoveSouth, false);
         delay(100);
         SetRelayState(config.R0_pin_Power, true);
         delay(100);
-        SetRelayState(config.R2_pin_MoveRight, true);
+        SetRelayState(config.R2_pin_MoveNorth, true);
     }
 
     void ResetMovement()
     {
         Logger::info(TAG, "Resetting Movement");
         SetRelayState(config.R0_pin_Power, false);
-        SetRelayState(config.R1_pin_MoveLeft, false);
-        SetRelayState(config.R2_pin_MoveRight, false);
+        SetRelayState(config.R1_pin_MoveSouth, false);
+        SetRelayState(config.R2_pin_MoveNorth, false);
         delay(50);
     }
 };

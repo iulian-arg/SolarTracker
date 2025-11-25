@@ -6,16 +6,16 @@
   },
   "pinSettings": {
     "R0_pin_Power": 27,
-    "R1_pin_MoveLeft": 26,
-    "R2_pin_MoveRight": 25,
+    "R1_pin_MoveSouth": 26,
+    "R2_pin_MoveNorth": 25,
     "R3_pin": 33,
     "POT1_pin_MaxAngl": 34,
     "B1_pin_Auto": 13,
-    "B2_pin_MoveRight": 12,
-    "B3_pin_MoveLeft": 14,
+    "B2_pin_MoveNorth": 12,
+    "B3_pin_MoveSouth": 14,
     "LED1_pin_Auto": 2,
-    "POT_Max_Left_Val": 3900,
-    "POT_Max_Right_Val": 200
+    "POT_Max_South_Val": 3900,
+    "POT_Max_North_Val": 200
   },
   "lightSensorSettings": {
     "lightDiffTreshold": 70,

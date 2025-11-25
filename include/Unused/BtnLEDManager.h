@@ -16,8 +16,8 @@ enum BtnState
 enum BtnCommand
 {
     _none,
-    _moveRight,
-    _moveLeft,
+    _moveNorth,
+    _moveSouth,
     _manualMode,
     _automaticMode,
 };
@@ -39,8 +39,8 @@ public:
         config = _config;
         posManager = _positioningManager;
         pinMode(config.B1_pin_Auto, INPUT);
-        pinMode(config.B2_pin_MoveRight, INPUT);
-        pinMode(config.B3_pin_MoveLeft, INPUT);
+        pinMode(config.B2_pin_MoveNorth, INPUT);
+        pinMode(config.B3_pin_MoveSouth, INPUT);
         // pinMode(config.LED1_pin_Auto, OUTPUT);
         // pinMode(config.LED2_pin_Manual, OUTPUT);
         // digitalWrite(config.LED1_pin_Auto, LOW);
@@ -50,26 +50,26 @@ public:
     void MonitorBtnStates()
     {
         BtnState b1_pin_Auto_state = digitalRead(config.B1_pin_Auto) == HIGH ? _pressed : _notPressed;
-        BtnState b2_pin_MoveRight_state = digitalRead(config.B2_pin_MoveRight) == HIGH ? _pressed : _notPressed;
-        BtnState b3_pin_MoveLeft_state = digitalRead(config.B3_pin_MoveLeft) == HIGH ? _pressed : _notPressed;
+        BtnState B2_pin_MoveNorth_state = digitalRead(config.B2_pin_MoveNorth) == HIGH ? _pressed : _notPressed;
+        BtnState B3_pin_MoveSouth_state = digitalRead(config.B3_pin_MoveSouth) == HIGH ? _pressed : _notPressed;
 
-        if (b2_pin_MoveRight_state == _pressed &&
-            previousBtnPressed != config.B2_pin_MoveRight)
+        if (B2_pin_MoveNorth_state == _pressed &&
+            previousBtnPressed != config.B2_pin_MoveNorth)
         {
-            previousBtnPressed = config.B2_pin_MoveRight;
-            Serial.println("Move Right Btn _pressed");
+            previousBtnPressed = config.B2_pin_MoveNorth;
+            Serial.println("Move North Btn _pressed");
             // delay(50); // Debounce delay
             posManager->SetPositioningMode(PositionMode::Manual);
-            posManager->TryMoveRight();
+            posManager->TryMoveNorth();
         }
-        else if (b3_pin_MoveLeft_state == _pressed &&
-                 previousBtnPressed != config.B3_pin_MoveLeft)
+        else if (B3_pin_MoveSouth_state == _pressed &&
+                 previousBtnPressed != config.B3_pin_MoveSouth)
         {
-            previousBtnPressed = config.B3_pin_MoveLeft;
-            Serial.println("Move Left Btn _pressed");
+            previousBtnPressed = config.B3_pin_MoveSouth;
+            Serial.println("Move South Btn _pressed");
             // delay(50); // Debounce delay
             posManager->SetPositioningMode(PositionMode::Manual);
-            posManager->TryMoveLeft();
+            posManager->TryMoveSouth();
         }
         else if (b1_pin_Auto_state == _pressed &&
                  previousBtnPressed != config.B1_pin_Auto)
@@ -84,8 +84,8 @@ public:
         }
         else if (previousBtnPressed != 0 &&
                  b1_pin_Auto_state == _notPressed &&
-                 b2_pin_MoveRight_state == _notPressed &&
-                 b3_pin_MoveLeft_state == _notPressed)
+                 B2_pin_MoveNorth_state == _notPressed &&
+                 B3_pin_MoveSouth_state == _notPressed)
         {
             Serial.println("Btn Released, Resetting Movement");
             previousBtnPressed = 0;
