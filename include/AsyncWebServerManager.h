@@ -12,6 +12,8 @@
 
 extern const char *TAG;
 
+extern ConfigManager *configManager;
+
 extern PositionManager *positionManager;
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -24,14 +26,6 @@ String message = "";
 // Json Variable to Hold Slider Values
 JSONVar sliderValues;
 
-// Get Slider Values
-String getSliderValues()
-{
-    sliderValues["sliderValue1"] = String(0);
-
-    String jsonString = JSON.stringify(sliderValues);
-    return jsonString;
-}
 
 // Initialize SPIFFS
 void initFS()
@@ -46,9 +40,9 @@ void initFS()
     }
 }
 
-void notifyClients(String sliderValues)
+void notifyClients(String notificationMessage)
 {
-    ws.textAll(sliderValues);
+    ws.textAll(notificationMessage);
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -93,12 +87,34 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         {
             positionManager->ResetMoving();
         }
-
-        notifyClients(getSliderValues());
-
-        if (strcmp((char *)data, "getValues") == 0)
+        else if (message.indexOf("RESTART") >= 0)
         {
-            notifyClients(getSliderValues());
+            Logger::info(TAG, "Restarting device as per Web request");
+            notifyClients("RESTARTING");
+            delay(1000);
+            ESP.restart();
+        }
+        else if (message.indexOf("GET_JSON") >= 0)
+        {
+            Logger::info(TAG, "Sent JSON Config to clients");
+            Serial.printf("\njsonConfig=%s\n", jsonConfig);
+            notifyClients(String("JSON_CONFIG:" + String(jsonConfig)));
+            return;
+        }
+        else if (message.indexOf("SET_JSON") >= 0)
+        {
+            Serial.println();
+            Serial.println();
+            Serial.println();
+            String jsonString = message.substring(9); // Extract JSON part
+            Logger::info(TAG, "Received JSON Config: %s", jsonString.c_str());
+            jsonConfig = jsonString.c_str();
+            configManager->WriteToSPIFFS(jsonConfig);
+            // configManager->UpdateJSONFromSPIFFS();
+            configManager->readConfig();
+            Logger::info(TAG, "Updated JSON Config");
+            notifyClients("JSON_UPDATED");
+            return;
         }
     }
 }
@@ -151,6 +167,10 @@ public:
     void loopWebServer()
     {
         ws.cleanupClients();
+    }
+    void notifyClients(String notificationMessage)
+    {
+        ws.textAll(notificationMessage);
     }
 };
 

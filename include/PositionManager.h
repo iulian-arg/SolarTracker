@@ -178,7 +178,7 @@ public:
         }
         else
         {
-            Logger::info(TAG, "Unknown positioning mode.");
+            Logger::warn(TAG, "Unknown positioning mode.");
         }
     }
 
@@ -189,7 +189,7 @@ public:
         {
             return; // No change in move event
         }
-        Logger::info(TAG, "ResetMoving");
+        Logger::warn(TAG, "ResetMoving");
         ResetMovement();
         AddMoveEventQueue(MoveDirection::NoMove);
     }
@@ -210,23 +210,30 @@ public:
 
     void PrintPositioningMode()
     {
-        String msg = "Current Positioning Mode: ";
+        String posMode;
         switch (positioningModeChangeQueue.back().mode)
         {
         case PositionMode::Manual:
-            msg += "MANUAL";
+            posMode = "MAN";
             break;
         case PositionMode::Automatic:
-            msg += "AUTOMATIC";
+            posMode = "AUTO";
             break;
         case PositionMode::LowLight:
-            msg += "LOW LIGHT";
+            posMode = "LOW";
             break;
         default:
-            msg += "UNKNOWN";
+            posMode = "UNKNOWN";
             break;
         }
-        Logger::info(TAG, msg.c_str());
+
+        Logger::info(TAG, "<s0:%.2f, s1:%.2f, <>:%d, dif:%.2f, %.2fºC, %s>",
+                     sensorInfo.lux_0,
+                     sensorInfo.lux_1,
+                     sensorInfo.angleSensorValue,
+                     sensorInfo.luxDiffPercent,
+                     sensorInfo.temperatureC,
+                     posMode.c_str());
     }
 
     void SetPositioningMode(PositionMode mode)
@@ -252,7 +259,7 @@ public:
             positioningModeChangeQueue.erase(positioningModeChangeQueue.begin());
         }
         msg += GetPositioningModeString(positioningModeChangeQueue.back());
-        Logger::info(TAG, msg.c_str());
+        Logger::warn(TAG, msg.c_str());
     }
 
     String GetPositioningModeString(PositioningModeChange modeChange)
@@ -349,7 +356,7 @@ public:
                  B2_pin_MoveNorth_state == _notPressed &&
                  B3_pin_MoveSouth_state == _notPressed)
         {
-            Logger::info(TAG, "Btn Released, Resetting Movement");
+            Logger::warn(TAG, "Btn Released, Resetting Movement");
             previousBtnPressed = 0;
             ResetMoving();
         }
@@ -381,12 +388,12 @@ public:
 
     void TryMoveSouth()
     {
-        Logger::info(TAG, "Move South Triggered");
+        Logger::warn(TAG, "Move South Triggered");
         // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_South_Val, analogRead(config.POT1_pin_MaxAngl));
         if (analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_South_Val)
         {
             ResetMovement();
-            Logger::info(TAG, "MAX SOUTH. Reset movements.");
+            Logger::warn(TAG, "MAX SOUTH. Reset movements.");
             return;
         }
         AddMoveEventQueue(MoveDirection::MoveSouth);
@@ -398,13 +405,13 @@ public:
     }
     void TryMoveNorth()
     {
-        Logger::info(TAG, "Move North Triggered");
+        Logger::warn(TAG, "Move North Triggered");
         // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_North_Val, analogRead(config.POT1_pin_MaxAngl));
 
         if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val)
         {
             ResetMovement();
-            Logger::info(TAG, "MAX NORTH. Reset movements.");
+            Logger::warn(TAG, "MAX NORTH. Reset movements.");
             return;
         }
         AddMoveEventQueue(MoveDirection::MoveNorth);
@@ -417,8 +424,9 @@ public:
 
     void ResetMovement()
     {
-        Logger::info(TAG, "Resetting Movement");
+        Logger::warn(TAG, "Resetting Movement");
         SetRelayState(config.R0_pin_Power, false);
+        delay(50);
         SetRelayState(config.R1_pin_MoveSouth, false);
         SetRelayState(config.R2_pin_MoveNorth, false);
         delay(50);

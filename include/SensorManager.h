@@ -123,12 +123,12 @@ public:
             sensorInfo.lux_0 >= sensorInfo.lux_1 ? -sensorInfo.lux_1 / sensorInfo.lux_0 * 100.0
                                                  : sensorInfo.lux_0 / sensorInfo.lux_1 * 100.0;
 
-        Logger::info(TAG, "<0, 1, angle, diff, temp>: <%.2f, %.2f, %d, %.2f, %.2fºC>",
-                     sensorInfo.lux_0,
-                     sensorInfo.lux_1,
-                     sensorInfo.angleSensorValue,
-                     sensorInfo.luxDiffPercent,
-                     sensorInfo.temperatureC);
+        // Logger::info(TAG, "<0, 1, angle, diff, temp>: <%.2f, %.2f, %d, %.2f, %.2fºC>",
+        //              sensorInfo.lux_0,
+        //              sensorInfo.lux_1,
+        //              sensorInfo.angleSensorValue,
+        //              sensorInfo.luxDiffPercent,
+        //              sensorInfo.temperatureC);
         // sensorInfo.luxDiffPercent =GetLuxDiff();
         return sensorInfo;
     }

@@ -21,7 +21,7 @@ TimeManager *timeManager;
 PositionManager *positionManager;
 AsyncWebServerManager *asyncWebServerManager;
 
-const char* TAG = "ST";
+const char *TAG = "ST";
 ulong lastProgramTimestamp;
 Config config;
 Ticker myTicker;
@@ -31,7 +31,7 @@ void tick();
 void setup()
 {
     Serial.begin(115200);
-    esp_log_level_set(TAG, ESP_LOG_DEBUG); 
+    esp_log_level_set(TAG, ESP_LOG_DEBUG);
 
     boardPowerManager = new BoardPowerManager();
     boardPowerManager->InitBoardPowerManager();
@@ -51,7 +51,7 @@ void setup()
     positionManager = new PositionManager();
 
     asyncWebServerManager = new AsyncWebServerManager();
-    asyncWebServerManager->initWebServer( );
+    asyncWebServerManager->initWebServer();
 
     myTicker.attach(1.0, tick);
     // config.POT1_pin_MaxAngl = 35;
@@ -88,4 +88,12 @@ void loop()
         positionManager->UpdateLEDStates();
         asyncWebServerManager->loopWebServer();
     }
+    auto logs = Logger::getLogs();
+    // Serial.println("=== Bulk Log Dump ===");
+    for (auto &entry : logs)
+    {
+        asyncWebServerManager->notifyClients("LOG_ENTRY:" + entry);
+        // Serial.println(entry);
+    }
+    Logger::clearLogs();
 }

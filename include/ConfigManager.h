@@ -40,7 +40,7 @@ struct Config
     wifiPairs wifis[10];
 };
 const char *filename = "/config.json";
-
+const char *jsonConfig;
 class ConfigManager
 {
 public:
@@ -57,11 +57,6 @@ public:
         if (!file)
         {
             Logger::error(TAG, "Failed to open file for reading");
-            return DynamicJsonDocument(0);
-        }
-        if (!file)
-        {
-            Logger::warn(TAG, "Returning default config");
             return DynamicJsonDocument(0);
         }
         Logger::info(TAG, "Getting JSON document");
@@ -145,43 +140,47 @@ public:
         serializeJsonPretty(doc, Serial);
         void *buffer = malloc(2048);
         size_t size = serializeJsonPretty(doc, buffer, 2048);
-        const char *charBuffer = static_cast<const char *>(buffer);
-        Logger::info(TAG, charBuffer);
+        jsonConfig = static_cast<const char *>(buffer);
+        Logger::info(TAG, jsonConfig);
         Logger::info(TAG, "Serialized JSON printed to Serial");
     }
 
-    void WriteToSPIFFS(Config config)
+    void WriteToSPIFFS(const char *jsonConf)
     {
+        File file;
         if (!SPIFFS.begin(true))
         {
             Logger::error(TAG, "An Error has occurred while mounting SPIFFS");
             return;
         }
-        File file = SPIFFS.open(filename, "w+");
+        file = SPIFFS.open(filename, "w+");
         if (!file)
         {
             Logger::error(TAG, "Failed to open file for writing");
             return;
         }
-
-        DynamicJsonDocument doc(1024);
-
-        JsonArray pairs = doc.createNestedObject("wifis").createNestedArray("pairs");
-        for (int i = 0; i < 5; i++)
-        {
-            JsonArray pair = pairs.createNestedArray();
-            pair.add(config.wifis[i].ssid);
-            pair.add(config.wifis[i].password);
-        }
-
-        serializeJsonPretty(doc, Serial);
-        Logger::info(TAG, "Serialized JSON printed to Serial");
-
-        if (serializeJsonPretty(doc, file) == 0)
-        {
-            Logger::error(TAG, "Failed to write to file");
-        }
+        file.print(jsonConf);
         file.close();
+        Logger::info(TAG, "File closed.");
+    }
+    
+    void UpdateJSONFromSPIFFS()
+    {
+        File file;
+        if (!SPIFFS.begin(true))
+        {
+            Logger::error(TAG, "An Error has occurred while mounting SPIFFS");
+            return;
+        }
+        file = SPIFFS.open(filename, "r+");
+        if (!file)
+        {
+            Logger::error(TAG, "Failed to open file for reading");
+            return;
+        }
+        jsonConfig = file.readString().c_str();
+        file.close();
+        Logger::info(TAG, "Config from SPIFFS: %s", jsonConfig);
         Logger::info(TAG, "File closed.");
     }
 };

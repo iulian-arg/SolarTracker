@@ -18,9 +18,40 @@
                 onmousedown="sendCommand(this, 'MOVE_NORTH_down')" onmouseup="sendCommand(this, 'MOVE_NORTH_up')" />
             <input type="button" class="btn btn-first btn-pressed" value="MOVE_SOUTH"
                 onmousedown="sendCommand(this, 'MOVE_SOUTH_down')" onmouseup="sendCommand(this, 'MOVE_SOUTH_up')" />
+        </div>
+        <div class="preset-container">
             <input type="button" class="btn btn-first" onclick="sendCommand(this, 'AUTO_MODE')" value="AUTO_MODE" />
             <input type="button" class="btn btn-first" onclick="sendCommand(this, 'MANUAL_MODE')" value="MANUAL_MODE" />
             <input type="button" class="btn btn-first" onclick="sendCommand(this, 'RESET')" value="RESET" />
+        </div>
+        <div class="log-container">
+            <h2>Log</h2>
+            <textarea id="logArea" readonly placeholder="Logs will appear here"
+                style="width:100%;height:120px;font-family:monospace;"></textarea>
+            <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+                <input type="button" class="btn" value="Clear Log" onclick="clearLog()" />
+                <label style="font-size:0.9em;display:flex;align-items:center;gap:6px;">
+                    <input id="autoScroll" type="checkbox" checked onchange="onLogSettingChange()" /> Auto-scroll
+                </label>
+                <label style="font-size:0.9em;display:flex;align-items:center;gap:6px;">
+                    <input id="showAllLogs" type="checkbox" onchange="onLogSettingChange()" /> Show all messages
+                </label>
+            </div>
+        </div>
+
+        <div class="json-container">
+            <h2>JSON Editor</h2>
+            <textarea id="jsonEditor" placeholder="JSON document will appear here"
+                style="width:100%;height:200px;font-family:monospace;"></textarea>
+            <div style="margin-top:8px;">
+                <input type="button" class="btn" value="Get JSON" onclick="getJSON()" />
+                <input type="button" class="btn" value="Format JSON" onclick="formatJSON()" />
+                <input type="button" class="btn" value="Send JSON" onclick="sendJSON()" />
+            </div>
+            <div id="jsonStatus" style="margin-top:6px;color:#333;font-size:0.9em;"></div>
+        </div>
+        <div class="preset-container">
+            <input type="button" class="btn btn-first" onclick="sendCommand(this, 'RESTART')" value="RESTART" />
         </div>
     </div>
     <script src="script.js"></script>
