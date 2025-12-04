@@ -2,11 +2,13 @@
 #ifndef ConfigManager_H
 #define ConfigManager_H
 
-#include <ArduinoJson.h>
-#include "SPIFFS.h"
+#include "LITTLEFS.h"
+#include "FS.h"
 #include "Logger.h"
+#include <array>
+#include <vector>
 extern const char *TAG;
-
+#define FORMAT_LITTLEFS_IF_FAILED true
 struct wifiPairs
 {
     String ssid;
@@ -31,7 +33,7 @@ struct Config
     uint16_t ledBlinkIntervalMs;
     uint16_t ledBlinkDurationMs;
 
-    float lightDiffTreshold;
+    uint8_t lightDiffTreshold;
     int lowLightTreshold;
     int positioningUpdateIntervalMs;
     int lightTrackingQueueSize;
@@ -39,121 +41,176 @@ struct Config
     int daylightOffset_sec;
     wifiPairs wifis[10];
 };
-const char *filename = "/config.json";
-const char *jsonConfig;
+const char *filename = "/config.txt";
+const char *configConfig;
+std::vector<String> configLines;
+
 class ConfigManager
 {
-public:
-    DynamicJsonDocument GetJsonDocument()
+private:
+    void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
     {
-        Logger::info(TAG, "Reading file from SPIFFS");
-        File file;
-        if (!SPIFFS.begin(true))
+        Serial.printf("Listing directory: %s\r\n", dirname);
+
+        File root = fs.open(dirname);
+        if (!root)
         {
-            Logger::error(TAG, "An Error has occurred while mounting SPIFFS");
-            return DynamicJsonDocument(0);
+            Serial.println("- failed to open directory");
+            return;
         }
-        file = SPIFFS.open(filename, "r+");
+        if (!root.isDirectory())
+        {
+            Serial.println(" - not a directory");
+            return;
+        }
+
+        File file = root.openNextFile();
+        while (file)
+        {
+            if (file.isDirectory())
+            {
+                Serial.print("  DIR : ");
+                Serial.println(file.name());
+                if (levels)
+                {
+                    listDir(fs, file.path(), levels - 1);
+                }
+            }
+            else
+            {
+                Serial.print("  FILE: ");
+                Serial.print(file.name());
+                Serial.print("\tSIZE: ");
+                Serial.println(file.size());
+            }
+            file = root.openNextFile();
+        }
+    }
+
+
+    void readConfigLines()
+    {
+        File file = LITTLEFS.open(filename, "r");
         if (!file)
         {
             Logger::error(TAG, "Failed to open file for reading");
-            return DynamicJsonDocument(0);
+            return;
         }
-        Logger::info(TAG, "Getting JSON document");
-        DynamicJsonDocument doc(1024);
-        DeserializationError error = deserializeJson(doc, file);
-        if (error)
+        int index = 0;
+        String line = "";
+        char c = 0;
+        while (file.available())
         {
-            Logger::error(TAG, "deserializeJson() failed: ");
-            Logger::error(TAG, error.c_str());
+            line = "";
+            while (file.available())
+            {
+                c = file.read();
+                if (c == '\n')
+                {
+                    break;
+                }
+                line += c;
+            }
+            configLines.push_back(line);
+            index++;
         }
         file.close();
-        Logger::info(TAG, "File closed.");
-        return doc;
     }
 
-    Config ReadConfigFromDoc(DynamicJsonDocument doc)
+    String getConfigValue(const String &key)
     {
+        for (const auto &line : configLines)
+        {
+            if (line.startsWith(key + " = "))
+            {
+                // Serial.printf("Found config for key %s: %s\n", key.c_str(), line.substring(key.length() + 3));
+                String value = line.substring(key.length() + 3);
+                value = value.substring(0, value.indexOf(';'));
+                value.trim();
+                Serial.printf("Config value for key %s:%s\n", key.c_str(), value.c_str());
+                return value;
+            }
+        }
+        return "";
+    }
+
+    void getWifiConfig(const String &key, String &ssid, String &password)
+    {
+        for (const auto &line : configLines)
+        {
+            if (line.startsWith(key + " = "))
+            {
+                String wifiConfig = line.substring(key.length() + 3);
+                ssid = wifiConfig.substring(0, wifiConfig.indexOf(':'));
+                password = wifiConfig.substring(wifiConfig.indexOf(':') + 1);
+                password = password.substring(0, password.indexOf(';'));
+
+                Logger::info(TAG, "WIFI Config: %s", wifiConfig.c_str());
+            }
+        }
+    }
+
+public:
+    Config readConfig()
+    {
+        if (!LITTLEFS.begin(FORMAT_LITTLEFS_IF_FAILED))
+        {
+            Serial.println("LittleFS Mount Failed");
+        }
+        listDir(LITTLEFS, "/", 1);
+
+        readConfigLines();
+
         Config cfg;
-        cfg.ntpServer = doc["tmSet"]["ntpServer"].as<const char *>();
-        cfg.gmtOffset_sec = doc["tmSet"]["gmtOffset_sec"].as<int>();
-        cfg.daylightOffset_sec = doc["tmSet"]["daylightOffset_sec"].as<int>();
+
+        cfg.ntpServer = getConfigValue("tmSet_ntpServer").c_str();
+        cfg.gmtOffset_sec = atoi(getConfigValue("tmSet_gmtOffset_sec").c_str());
+        cfg.daylightOffset_sec = atoi(getConfigValue("tmSet_daylightOffset_sec").c_str());
         cfg.ledBlinkIntervalMs = 5000;
         cfg.ledBlinkDurationMs = 500;
 
-        cfg.lightDiffTreshold = doc["lightSensorSettings"]["lightDiffTreshold"].as<float>();
-        cfg.lowLightTreshold = doc["lightSensorSettings"]["lowLightTreshold"].as<int>();
-        cfg.lightTrackingQueueSize = doc["lightSensorSettings"]["lightTrackingQueueSize"].as<int>();
-        cfg.positioningUpdateIntervalMs = doc["lightSensorSettings"]["positioningUpdateIntervalMs"].as<int>();
+        cfg.lightDiffTreshold = atoi(getConfigValue("lightSensorSettings_lightDiffTreshold").c_str());
+        cfg.lowLightTreshold = atoi(getConfigValue("lightSensorSettings_lowLightTreshold").c_str());
+        cfg.lightTrackingQueueSize = atoi(getConfigValue("lightSensorSettings_lightTrackingQueueSize").c_str());
+        cfg.positioningUpdateIntervalMs = atoi(getConfigValue("lightSensorSettings_positioningUpdateIntervalMs").c_str());
 
-        int i = 0;
-        for (JsonVariant v : doc["wifis"]["pairs"].as<JsonArray>())
+        cfg.RetryCount = (uint8_t)atoi(getConfigValue("wifis_RetryCount").c_str());
+        cfg.RetryDelay = (uint16_t)atoi(getConfigValue("wifis_RetryDelay").c_str());
+
+        cfg.R1_pin_MoveSouth = (uint8_t)atoi(getConfigValue("pinSettings_R1_pin_MoveSouth").c_str());
+        cfg.R2_pin_MoveNorth = (uint8_t)atoi(getConfigValue("pinSettings_R2_pin_MoveNorth").c_str());
+        cfg.R3_pin = (uint8_t)atoi(getConfigValue("pinSettings_R3_pin").c_str());
+        cfg.POT1_pin_MaxAngl = (uint8_t)atoi(getConfigValue("pinSettings_POT1_pin_MaxAngl").c_str());
+        cfg.R0_pin_Power = (uint8_t)atoi(getConfigValue("pinSettings_R0_pin_Power").c_str());
+        cfg.B1_pin_Auto = (uint8_t)atoi(getConfigValue("pinSettings_B1_pin_Auto").c_str());
+        cfg.B2_pin_MoveNorth = (uint8_t)atoi(getConfigValue("pinSettings_B2_pin_MoveNorth").c_str());
+        cfg.B3_pin_MoveSouth = (uint8_t)atoi(getConfigValue("pinSettings_B3_pin_MoveSouth").c_str());
+        cfg.LED1_pin_Auto = (uint8_t)atoi(getConfigValue("pinSettings_LED1_pin_Auto").c_str());
+        cfg.POT_Max_South_Val = (uint16_t)atoi(getConfigValue("pinSettings_POT_Max_South_Val").c_str());
+        cfg.POT_Max_North_Val = (uint16_t)atoi(getConfigValue("pinSettings_POT_Max_North_Val").c_str());
+
+        for (int i = 0; i < 10; i++)
         {
-            auto ssid = v[0].as<const char *>();
-            auto pass = v[1].as<const char *>();
+            String ssid, password;
+            getWifiConfig("wifis_pair" + String(i), ssid, password);
             cfg.wifis[i].ssid = ssid;
-            cfg.wifis[i].password = pass;
-            Logger::info(TAG, "\n __wifis: %s __ %s", ssid, pass);
-            i++;
+            cfg.wifis[i].password = password;
         }
-        cfg.RetryCount = doc["wifis"]["RetryCount"].as<uint8_t>();
-        cfg.RetryDelay = doc["wifis"]["RetryDelay"].as<uint16_t>();
 
-        cfg.R1_pin_MoveSouth = doc["pinSettings"]["R1_pin_MoveSouth"].as<uint8_t>();
-        cfg.R2_pin_MoveNorth = doc["pinSettings"]["R2_pin_MoveNorth"].as<uint8_t>();
-        cfg.R3_pin = doc["pinSettings"]["R3_pin"].as<uint8_t>();
-        cfg.POT1_pin_MaxAngl = doc["pinSettings"]["POT1_pin_MaxAngl"].as<uint8_t>();
-        cfg.R0_pin_Power = doc["pinSettings"]["R0_pin_Power"].as<uint8_t>();
-        cfg.B1_pin_Auto = doc["pinSettings"]["B1_pin_Auto"].as<uint8_t>();
-        cfg.B2_pin_MoveNorth = doc["pinSettings"]["B2_pin_MoveNorth"].as<uint8_t>();
-        cfg.B3_pin_MoveSouth = doc["pinSettings"]["B3_pin_MoveSouth"].as<uint8_t>();
-        cfg.LED1_pin_Auto = doc["pinSettings"]["LED1_pin_Auto"].as<uint8_t>();
-        cfg.POT_Max_South_Val = doc["pinSettings"]["POT_Max_South_Val"].as<uint16_t>();
-        cfg.POT_Max_North_Val = doc["pinSettings"]["POT_Max_North_Val"].as<uint16_t>();
-
-        Logger::info(TAG, "Config read from doc:");
+        Logger::info(TAG, "Config read from doc: END");
 
         return cfg;
     }
 
-    Config readConfig()
-    {
-        Config config;
-
-        DynamicJsonDocument doc = GetJsonDocument();
-        if (doc.isNull())
-        {
-            Logger::warn(TAG, "Returning default config");
-            return config;
-        }
-        config = ReadConfigFromDoc(doc);
-
-        Logger::info(TAG, "printJson");
-        printJson(doc);
-        Logger::info(TAG, "end printJson");
-
-        return config;
-    }
-
-    void printJson(DynamicJsonDocument doc)
-    {
-        serializeJsonPretty(doc, Serial);
-        void *buffer = malloc(2048);
-        size_t size = serializeJsonPretty(doc, buffer, 2048);
-        jsonConfig = static_cast<const char *>(buffer);
-        Logger::info(TAG, jsonConfig);
-        Logger::info(TAG, "Serialized JSON printed to Serial");
-    }
-
-    void WriteToSPIFFS(const char *jsonConf)
+    void WriteToLITTLEFS(const char *jsonConf)
     {
         File file;
-        if (!SPIFFS.begin(true))
+        if (!LITTLEFS.begin(true))
         {
-            Logger::error(TAG, "An Error has occurred while mounting SPIFFS");
+            Logger::error(TAG, "An Error has occurred while mounting LITTLEFS");
             return;
         }
-        file = SPIFFS.open(filename, "w+");
+        file = LITTLEFS.open(filename, "w+");
         if (!file)
         {
             Logger::error(TAG, "Failed to open file for writing");
@@ -163,24 +220,24 @@ public:
         file.close();
         Logger::info(TAG, "File closed.");
     }
-    
-    void UpdateJSONFromSPIFFS()
+
+    void UpdateJSONFromLITTLEFS()
     {
         File file;
-        if (!SPIFFS.begin(true))
+        if (!LITTLEFS.begin(true))
         {
-            Logger::error(TAG, "An Error has occurred while mounting SPIFFS");
+            Logger::error(TAG, "An Error has occurred while mounting LITTLEFS");
             return;
         }
-        file = SPIFFS.open(filename, "r+");
+        file = LITTLEFS.open(filename, "r+");
         if (!file)
         {
             Logger::error(TAG, "Failed to open file for reading");
             return;
         }
-        jsonConfig = file.readString().c_str();
+        configConfig = file.readString().c_str();
         file.close();
-        Logger::info(TAG, "Config from SPIFFS: %s", jsonConfig);
+        Logger::info(TAG, "Config from LITTLEFS: %s", configConfig);
         Logger::info(TAG, "File closed.");
     }
 };

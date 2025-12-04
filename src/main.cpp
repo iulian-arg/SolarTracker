@@ -1,6 +1,6 @@
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 
-#include <Arduino.h>
+// #include <Arduino.h>
 #include <WiFi.h>
 #include <Ticker.h>
 
@@ -12,8 +12,10 @@
 #include "AsyncWebServerManager.h"
 #include "PositionManager.h"
 #include "Logger.h"
+// #include "BluetoothManager.h"
 
 BoardPowerManager *boardPowerManager;
+// BluetoothManager *bluetoothManager;
 WifiManager *wifiManager;
 SensorManager *sensorManager;
 ConfigManager *configManager;
@@ -41,6 +43,9 @@ void setup()
 
     wifiManager = new WifiManager();
     wifiManager->WifiConnect();
+
+    // bluetoothManager = new BluetoothManager();
+    // bluetoothManager->SetupBT();
 
     sensorManager = new SensorManager();
     sensorManager->SetupSensors();

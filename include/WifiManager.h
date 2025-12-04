@@ -5,6 +5,9 @@
 #include <WiFi.h>
 #include "ConfigManager.h"
 #include "Logger.h"
+#include <WiFiMulti.h>
+
+WiFiMulti wifiMulti;
 
 extern const char *TAG;
 
@@ -13,59 +16,84 @@ extern Config config;
 class WifiManager
 {
 
+  std::vector<String> availableSSIDs;
+
 public:
   WifiManager() {}
+
+  void scanNetworks()
+  {
+    availableSSIDs.clear();
+    // scan for nearby networks:
+    Logger::info(TAG, "** Scan Networks **");
+    byte numSsid = WiFi.scanNetworks();
+
+    // print the list of networks seen:
+    Logger::info(TAG, "SSID List: %d networks found", numSsid);
+    
+    // print the network number and name for each network found:
+    for (int thisNet = 0; thisNet < numSsid; thisNet++)
+    {
+      Logger::info(TAG, "%d) Network: %s", thisNet, WiFi.SSID(thisNet).c_str());
+      availableSSIDs.push_back(WiFi.SSID(thisNet));
+    }
+  }
+
+  const uint32_t connectTimeoutMs = 20000;
   void WifiConnect()
   {
-    for (int i = 0; i <= 1; i++)
-    {
-      auto ssid = config.wifis[i].ssid;
-      auto password = config.wifis[i].password;
-      Logger::info(TAG, "--connecting to ssid: %s \n", ssid.c_str());
-      WiFi.hostname("SolarTracker");
-      WiFi.begin(ssid, password);
+    WiFi.mode(WIFI_STA);
+    WiFi.hostname("SolarTracker");
 
-      int connAttempts = 0;
-      while (WiFi.status() != WL_CONNECTED && connAttempts < config.RetryCount)
-      {
-        Logger::info(TAG, ".%d ", WiFi.status());
-        connAttempts++;
-        delay(config.RetryDelay);
-      }
+    scanNetworks();
+    String ssid;
+    String password;
 
-      if (WiFi.status() == WL_CONNECTED)
-      {
-        Logger::info(TAG, "WiFi connected");
-        Logger::info(TAG, "IP address:  %s", WiFi.localIP().toString().c_str());
-        Logger::info(TAG, "MAC address: %s", WiFi.macAddress().c_str());
-        break;
-      }
-    }
-    if (WiFi.status() != WL_CONNECTED)
+    for (int i = 0; i <= 10; i++)
     {
-      Logger::error(TAG, "Failed to connect to WiFi");
+      ssid = config.wifis[i].ssid;
+      password = config.wifis[i].password;
+      if (ssid.length() == 0)
+      {
+        continue;
+      }
+      wifiMulti.addAP(ssid.c_str(), password.c_str());
     }
+
+    if (wifiMulti.run(connectTimeoutMs) == WL_CONNECTED)
+    {
+      Logger::info(TAG, "WiFi connected. SSID: %s, IP address: %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+    }
+    else
+    {
+      Logger::error(TAG, "WiFi not connected");
+    }
+  }
+
+  const char *getWifiStatus(int status)
+  {
+    switch (status)
+    {
+    case WL_NO_SHIELD:
+      return "WL_NO_SHIELD";
+    case WL_IDLE_STATUS:
+      return "WL_IDLE_STATUS";
+    case WL_NO_SSID_AVAIL:
+      return "WL_NO_SSID_AVAIL";
+    case WL_SCAN_COMPLETED:
+      return "WL_SCAN_COMPLETED";
+    case WL_CONNECTED:
+      return "WL_CONNECTED";
+    case WL_CONNECT_FAILED:
+      return "WL_CONNECT_FAILED";
+    case WL_CONNECTION_LOST:
+      return "WL_CONNECTION_LOST";
+    case WL_DISCONNECTED:
+      return "WL_DISCONNECTED";
+    default:
+      return "UNKNOWN_STATUS";
+    }
+    return "UNKNOWN_STATUS";
   }
 };
 #endif
-// const char *ssid = "TP-Link_22F4";
-// const char *password = "14756450";
-
-// const char *ssid2 = "POCO X3 Pro";
-// const char *password2 = "18273645";
-
-// const char *ssid3 = "Asus";
-// const char *password3 = "18273645";
-/**
-      [
-        "POCO X3 Pro",
-        "18273645"
-      ],
-      [
-        "VIVOBOOK",
-        "18273645"
-      ],
-      [
-        "Asus",
-        "18273645"
-      ]*/

@@ -5,8 +5,8 @@
 #include <Arduino.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include "SPIFFS.h"
-#include <Arduino_JSON.h>
+#include "LITTLEFS.h"
+#include "FS.h"
 #include "PositionManager.h"
 #include "Logger.h"
 
@@ -23,20 +23,12 @@ AsyncWebSocket ws("/ws");
 
 String message = "";
 
-// Json Variable to Hold Slider Values
-JSONVar sliderValues;
-
-
-// Initialize SPIFFS
+// Initialize LITTLEFS
 void initFS()
 {
-    if (!SPIFFS.begin())
+    if (!LITTLEFS.begin())
     {
-        Logger::error(TAG, "An error has occurred while mounting SPIFFS");
-    }
-    else
-    {
-        Logger::info(TAG, "SPIFFS mounted successfully");
+        Logger::error(TAG, "An error has occurred while mounting LITTLEFS");
     }
 }
 
@@ -94,26 +86,23 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
             delay(1000);
             ESP.restart();
         }
-        else if (message.indexOf("GET_JSON") >= 0)
+        else if (message.indexOf("GET_config") >= 0)
         {
-            Logger::info(TAG, "Sent JSON Config to clients");
-            Serial.printf("\njsonConfig=%s\n", jsonConfig);
-            notifyClients(String("JSON_CONFIG:" + String(jsonConfig)));
+            Logger::info(TAG, "Sent config Config to clients");
+            configManager->UpdateJSONFromLITTLEFS();
+            notifyClients(String("config_CONFIG:" + String(configConfig)));
             return;
         }
-        else if (message.indexOf("SET_JSON") >= 0)
+        else if (message.indexOf("SET_config") >= 0)
         {
             Serial.println();
-            Serial.println();
-            Serial.println();
-            String jsonString = message.substring(9); // Extract JSON part
-            Logger::info(TAG, "Received JSON Config: %s", jsonString.c_str());
-            jsonConfig = jsonString.c_str();
-            configManager->WriteToSPIFFS(jsonConfig);
-            // configManager->UpdateJSONFromSPIFFS();
+            String configString = message.substring(11); // Extract config part
+            Logger::info(TAG, "Received config Config: %s", configString.c_str());
+            configConfig = configString.c_str();
+            configManager->WriteToLITTLEFS(configConfig);
             configManager->readConfig();
-            Logger::info(TAG, "Updated JSON Config");
-            notifyClients("JSON_UPDATED");
+            Logger::info(TAG, "Updated config Config");
+            notifyClients("config_UPDATED");
             return;
         }
     }
@@ -145,9 +134,9 @@ void initWebSocket()
 
     // Web Server Root URL
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(SPIFFS, "/index.html", "text/html"); });
+              { request->send(LITTLEFS, "/index.html", "text/html"); });
 
-    server.serveStatic("/", SPIFFS, "/");
+    server.serveStatic("/", LITTLEFS, "/");
 
     // Start server
     server.begin();

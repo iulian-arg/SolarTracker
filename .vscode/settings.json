@@ -6,7 +6,9 @@
         "string_view": "cpp",
         "initializer_list": "cpp",
         "regex": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "new": "cpp",
+        "string": "cpp"
     },
     "FSharp.suggestGitignore": false
 }

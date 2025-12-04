@@ -35,18 +35,15 @@ function onMessage(event) {
   console.log(event.data);
   var msg = event.data;
 
-  // Append incoming messages to the log area and auto-scroll
-  // if (shouldLog(msg)) appendLog('RX: ' + msg);
-
   if (msg === "RESTARTING") {
-    var status = document.getElementById('jsonStatus');
+    var status = document.getElementById('configStatus');
     if (status) status.innerHTML = 'Device is restarting...';
     return;
   }
 
-  if (msg === "JSON_UPDATED") {
-    var status = document.getElementById('jsonStatus');
-    if (status) status.innerHTML = 'JSON configuration updated successfully.';
+  if (msg === "config_UPDATED") {
+    var status = document.getElementById('configStatus');
+    if (status) status.innerHTML = 'config configuration updated successfully.';
     return;
   }
   if (msg.indexOf("LOG_ENTRY") >= 0) {
@@ -56,20 +53,18 @@ function onMessage(event) {
     appendLog(msg);
     return;
   }
-  if (msg.indexOf("JSON_CONFIG") >= 0) {
-    msg = msg.substring(12); // Remove the prefix
+  if (msg.indexOf("config_CONFIG") >= 0) {
+    msg = msg.replace("config_CONFIG:", "");
 
-    var myObj = JSON.parse(msg);
 
-    // Populate the raw JSON editor (if present) with a pretty-printed document
-    var editor = document.getElementById('jsonEditor');
+    var editor = document.getElementById('configEditor');
     if (editor) {
       try {
-        editor.value = JSON.stringify(myObj, null, 2);
-        var status = document.getElementById('jsonStatus');
+        editor.value = msg;
+        var status = document.getElementById('configStatus');
         if (status) status.innerHTML = '';
       } catch (e) {
-        if (status) status.innerHTML = 'Error formatting JSON: ' + e.message;
+        if (status) status.innerHTML = 'Error formatting config: ' + e.message;
       }
     }
   }
@@ -99,12 +94,12 @@ function shouldLog(msg) {
     if (showAll && showAll.checked) return true;
     if (!msg) return false;
     // Allowlist prefixes and exact messages
-    var prefixes = ['LOG:', 'ERR:', 'ERROR', 'JSON_CONFIG:', 'SET_JSON:', 'GET_JSON:', 'RESTART', 'JSON_UPDATED', 'JSON_CONFIG'];
+    var prefixes = ['LOG:', 'ERR:', 'ERROR', 'config_CONFIG:', 'SET_config:', 'GET_config:', 'RESTART', 'config_UPDATED', 'config_CONFIG'];
     for (var i = 0; i < prefixes.length; i++) {
       if (msg.indexOf(prefixes[i]) === 0) return true;
     }
     // Also allow short status words
-    var exact = ['RESTARTING', 'JSON_UPDATED'];
+    var exact = ['RESTARTING', 'config_UPDATED'];
     for (var j = 0; j < exact.length; j++) {
       if (msg === exact[j]) return true;
     }
@@ -123,42 +118,26 @@ function onLogSettingChange() {
   // placeholder in case we want to persist or react to setting changes
 }
 
-function getJSON() {
-  var status = document.getElementById('jsonStatus');
+function getconfig() {
+  var status = document.getElementById('configStatus');
   try {
-    websocket.send('GET_JSON:');
-    if (status) status.innerHTML = 'get JSON';
+    websocket.send('GET_config:');
+    if (status) status.innerHTML = 'get config';
   } catch (e) {
-    if (status) status.innerHTML = 'Error requesting JSON: ' + e.message;
+    if (status) status.innerHTML = 'Error requesting config: ' + e.message;
   }
 
 }
 
-function sendJSON() {
-  var editor = document.getElementById('jsonEditor');
-  var status = document.getElementById('jsonStatus');
+function sendconfig() {
+  var editor = document.getElementById('configEditor');
+  var status = document.getElementById('configStatus');
   if (!editor) return;
   var txt = editor.value;
   try {
-    // Validate JSON before sending
-    var parsed = JSON.parse(txt);
-    // Send the JSON string to the server. Prefix used so server can distinguish (adjust server if needed)
-    websocket.send('SET_JSON:' + JSON.stringify(parsed));
-    if (status) status.innerHTML = 'JSON sent';
+    websocket.send('SET_config:' + txt);
+    if (status) status.innerHTML = 'config sent';
   } catch (e) {
-    if (status) status.innerHTML = 'Invalid JSON: ' + e.message;
-  }
-}
-
-function formatJSON() {
-  var editor = document.getElementById('jsonEditor');
-  var status = document.getElementById('jsonStatus');
-  if (!editor) return;
-  try {
-    var parsed = JSON.parse(editor.value);
-    editor.value = JSON.stringify(parsed, null, 2);
-    if (status) status.innerHTML = 'Formatted';
-  } catch (e) {
-    if (status) status.innerHTML = 'Invalid JSON: ' + e.message;
+    if (status) status.innerHTML = 'Invalid config: ' + e.message;
   }
 }

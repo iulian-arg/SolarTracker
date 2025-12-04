@@ -189,7 +189,6 @@ public:
         {
             return; // No change in move event
         }
-        Logger::warn(TAG, "ResetMoving");
         ResetMovement();
         AddMoveEventQueue(MoveDirection::NoMove);
     }
@@ -399,9 +398,9 @@ public:
         AddMoveEventQueue(MoveDirection::MoveSouth);
         SetRelayState(config.R2_pin_MoveNorth, false);
         delay(100);
-        SetRelayState(config.R0_pin_Power, true);
-        delay(100);
         SetRelayState(config.R1_pin_MoveSouth, true);
+        delay(100);
+        SetRelayState(config.R0_pin_Power, true);
     }
     void TryMoveNorth()
     {
@@ -417,9 +416,9 @@ public:
         AddMoveEventQueue(MoveDirection::MoveNorth);
         SetRelayState(config.R1_pin_MoveSouth, false);
         delay(100);
-        SetRelayState(config.R0_pin_Power, true);
-        delay(100);
         SetRelayState(config.R2_pin_MoveNorth, true);
+        delay(100);
+        SetRelayState(config.R0_pin_Power, true);
     }
 
     void ResetMovement()

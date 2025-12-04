@@ -1,5 +1,5 @@
 #pragma once
-#include <Arduino.h>
+// #include <Arduino.h>
 #include <sys/time.h>
 #include <deque>
 
