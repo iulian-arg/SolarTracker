@@ -3,18 +3,16 @@
 #define BluetoothManager_H
 
 #include "BluetoothSerial.h"
+#include "PositionManager.h"
+#include "WifiManager.h"
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
 #endif
 
 BluetoothSerial SerialBT;
-
-enum CommandType
-{
-    relayChange = 0,
-    genericCommand = 1
-};
+extern PositionManager *positionManager;
+extern WifiManager *wifiManager;
 
 class BluetoothManager
 {
@@ -26,36 +24,97 @@ public:
         Serial.println("The device started, now you can pair it with bluetooth!");
     }
 
-    String BT_ReadCommand()
+    String BT_ReadLine()
     {
+        String line = "";
+        char c;
         auto startMS = millis();
-        if (SerialBT.available())
+        while (millis() - startMS < 1000)
         {
-
-            // Serial.print("--111-- ");
-            // Serial.println(millis() - startMS);
-
-            char buf[10] = "";
-            SerialBT.readBytes(buf, 4);
-            // Serial.print("--222-- ");
-            // Serial.println(millis() - startMS);
-
-            return buf;
+            if (SerialBT.available())
+            {
+                c = SerialBT.read();
+                if (c == '\n')
+                {
+                    break;
+                }
+                line += c;
+            }
         }
+        return line;
+    }
+
+    void BT_WriteLine(const String &line)
+    {
+        SerialBT.println(line);
     }
 
     void BT_doWork()
     {
-        if (Serial.available())
+        auto command = BT_ReadLine();
+        command.trim();
+        if (command.length() > 0)
         {
-            SerialBT.write(Serial.read());
+            Serial.printf("BT Command Received: _%s_\n", command.c_str());
+
+            if (command == String("NORTH"))
+            {
+                BT_WriteLine("Moving North");
+                positionManager->TryMoveNorth();
+            }
+            else if (command == String("SOUTH"))
+            {
+                BT_WriteLine("Moving South");
+                positionManager->TryMoveSouth();
+            }
+            else if (command == String("AUTO"))
+            {
+                BT_WriteLine("Setting to Auto Mode");
+                positionManager->SetPositioningMode(PositionMode::Automatic);
+            }
+            else if (command == String("MANUAL"))
+            {
+                BT_WriteLine("Setting to Manual Mode");
+                positionManager->SetPositioningMode(PositionMode::Manual);
+            }
+            else if (command == String("RESET"))
+            {
+                BT_WriteLine("Resetting Position");
+                positionManager->ResetMoving();
+            }
+            else if (command == String("maxN"))
+            {
+                BT_WriteLine("Setting Max North Position");
+                positionManager->TryMoveNorth(true);
+            }
+            else if (command == String("maxS"))
+            {
+                BT_WriteLine("Setting Max South Position");
+                positionManager->TryMoveSouth(true);
+            }
+            else if (command == String("RESTART"))
+            {
+                BT_WriteLine("Restarting SolarTracker...");
+                ESP.restart();
+            }
+            else if (command == String("WIFI"))
+            {
+                String wifiStatus = wifiManager->GetWifiIpAndSSID();
+                BT_WriteLine(wifiStatus);
+            }
+            
+            else if (command == String("RECONNECT"))
+            {
+                BT_WriteLine("Reconnecting to WiFi...");
+                wifiManager->WifiConnect();
+
+            }
+            else
+            {
+                BT_WriteLine("Unknown Command");
+            }
         }
-        if (SerialBT.available())
-        {
-            Serial.write(SerialBT.read());
-        }
-        delay(100);
-    }
+    };
 };
 
 #endif

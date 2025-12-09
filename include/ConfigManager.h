@@ -17,6 +17,7 @@ struct wifiPairs
 struct Config
 {
     uint16_t RetryDelay;
+    uint16_t RetryTotalInterval;
     uint8_t RetryCount;
     String ntpServer;
     uint8_t R1_pin_MoveSouth;
@@ -176,6 +177,7 @@ public:
 
         cfg.RetryCount = (uint8_t)atoi(getConfigValue("wifis_RetryCount").c_str());
         cfg.RetryDelay = (uint16_t)atoi(getConfigValue("wifis_RetryDelay").c_str());
+        cfg.RetryTotalInterval = (uint16_t)atoi(getConfigValue("wifis_RetryTotalInterval").c_str());
 
         cfg.R1_pin_MoveSouth = (uint8_t)atoi(getConfigValue("pinSettings_R1_pin_MoveSouth").c_str());
         cfg.R2_pin_MoveNorth = (uint8_t)atoi(getConfigValue("pinSettings_R2_pin_MoveNorth").c_str());

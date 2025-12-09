@@ -6,10 +6,12 @@
 #include "ConfigManager.h"
 #include "Logger.h"
 #include <WiFiMulti.h>
+#include "TimeManager.h"
 
 WiFiMulti wifiMulti;
 
 extern const char *TAG;
+extern TimeManager *timeManager;
 
 extern Config config;
 
@@ -30,7 +32,7 @@ public:
 
     // print the list of networks seen:
     Logger::info(TAG, "SSID List: %d networks found", numSsid);
-    
+
     // print the network number and name for each network found:
     for (int thisNet = 0; thisNet < numSsid; thisNet++)
     {
@@ -39,7 +41,6 @@ public:
     }
   }
 
-  const uint32_t connectTimeoutMs = 20000;
   void WifiConnect()
   {
     WiFi.mode(WIFI_STA);
@@ -60,9 +61,11 @@ public:
       wifiMulti.addAP(ssid.c_str(), password.c_str());
     }
 
-    if (wifiMulti.run(connectTimeoutMs) == WL_CONNECTED)
+    if (wifiMulti.run(config.RetryTotalInterval) == WL_CONNECTED)
     {
       Logger::info(TAG, "WiFi connected. SSID: %s, IP address: %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+
+      timeManager->initTime();
     }
     else
     {
@@ -94,6 +97,18 @@ public:
       return "UNKNOWN_STATUS";
     }
     return "UNKNOWN_STATUS";
+  }
+
+  String GetWifiIpAndSSID()
+  {
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      return String("SSID: ") + WiFi.SSID() + String(", IP: ") + WiFi.localIP().toString();
+    }
+    else
+    {
+      return String("Not connected to WiFi");
+    }
   }
 };
 #endif

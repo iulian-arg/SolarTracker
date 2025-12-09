@@ -18,6 +18,7 @@ lightSensorSettings_lightTrackingQueueSize = 5;
 lightSensorSettings_positioningUpdateIntervalMs = 1000;
 wifis_RetryCount = 20;
 wifis_RetryDelay = 1500;
+wifis_RetryTotalInterval = 15000;
 wifis_pair0 = TP-Link_22F4:14756450;
 wifis_pair1 = HUAWEI-WGcq:N5HPKrkF;
 wifis_pair2 = POCO X3 Pro:18273645;

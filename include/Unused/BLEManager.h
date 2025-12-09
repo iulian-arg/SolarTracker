@@ -9,7 +9,7 @@
 #include <esp32-hal.h>
 
 // BLE server name
-#define bleServerName "BME280_ESP32"
+#define bleServerName "SolarTrackerBTLE"
 
 // Timer variables
 unsigned long lastTime = 0;
@@ -32,12 +32,12 @@ class MyServerCallbacks : public BLEServerCallbacks
 {
     void onConnect(BLEServer *pServer)
     {
-        //Serial.println("device connected");
+        Serial.println("device connected");
         deviceConnected = true;
     };
     void onDisconnect(BLEServer *pServer)
     {
-        //Serial.println("device disconnected");
+        Serial.println("device disconnected");
         deviceConnected = false;
     }
 };

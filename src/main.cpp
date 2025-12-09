@@ -12,10 +12,11 @@
 #include "AsyncWebServerManager.h"
 #include "PositionManager.h"
 #include "Logger.h"
-// #include "BluetoothManager.h"
+#include "BluetoothManager.h"
+// #include "BLEManager.h"
 
 BoardPowerManager *boardPowerManager;
-// BluetoothManager *bluetoothManager;
+BluetoothManager *bluetoothManager;
 WifiManager *wifiManager;
 SensorManager *sensorManager;
 ConfigManager *configManager;
@@ -41,17 +42,18 @@ void setup()
     configManager = new ConfigManager();
     config = configManager->readConfig();
 
+    timeManager = new TimeManager();
+    // timeManager->initTime(); // moved to WifiManager after successful WiFi connection
+   
     wifiManager = new WifiManager();
     wifiManager->WifiConnect();
 
-    // bluetoothManager = new BluetoothManager();
-    // bluetoothManager->SetupBT();
+
+    bluetoothManager = new BluetoothManager();
+    bluetoothManager->SetupBT();
 
     sensorManager = new SensorManager();
     sensorManager->SetupSensors();
-
-    timeManager = new TimeManager();
-    timeManager->initTime();
 
     positionManager = new PositionManager();
 
@@ -59,7 +61,6 @@ void setup()
     asyncWebServerManager->initWebServer();
 
     myTicker.attach(1.0, tick);
-    // config.POT1_pin_MaxAngl = 35;
 }
 unsigned long previousPositioningMillis = 0;
 unsigned long previousButtonMillis = 0;
@@ -92,9 +93,11 @@ void loop()
         positionManager->MonitorBtnStates();
         positionManager->UpdateLEDStates();
         asyncWebServerManager->loopWebServer();
+        // bleManager->loopBLE();
+        bluetoothManager->BT_doWork();
+        positionManager->ManageMaxCommands();
     }
     auto logs = Logger::getLogs();
-    // Serial.println("=== Bulk Log Dump ===");
     for (auto &entry : logs)
     {
         asyncWebServerManager->notifyClients("LOG_ENTRY:" + entry);

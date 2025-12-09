@@ -42,9 +42,11 @@ enum PositionMode
 };
 enum MoveDirection
 {
+    MaxSouth = -2,
     MoveSouth = -1,
     NoMove = 0,
-    MoveNorth = 1
+    MoveNorth = 1,
+    MaxNorth = 2
 };
 struct PositioningModeChange
 {
@@ -68,7 +70,9 @@ private:
     std::vector<float> LuxDiffQueue = std::vector<float>();
     std::vector<float> LuxAVGQueue = std::vector<float>();
     std::vector<PositioningModeChange> positioningModeChangeQueue = std::vector<PositioningModeChange>();
-    std::vector<MoveEvent> MoveEventQueue = std::vector<MoveEvent>();
+    // Initialize MoveEventQueue with one default MoveEvent so back() is valid
+    std::vector<MoveEvent> MoveEventQueue = std::vector<MoveEvent>(1, MoveEvent{MoveDirection::NoMove, time(nullptr)});
+    MoveDirection ongoingMovement = MoveEventQueue.back().direction;
 
 public:
     PositionManager()
@@ -81,6 +85,10 @@ public:
         LuxDiffQueue.reserve(config.lightTrackingQueueSize);
         LuxDiffQueue.push_back(100);
         MoveEventQueue.reserve(config.lightTrackingQueueSize);
+        if (MoveEventQueue.empty())
+        {
+            MoveEventQueue.push_back({MoveDirection::NoMove, time(nullptr)});
+        }
 
         pinMode(config.B1_pin_Auto, INPUT);
         pinMode(config.B2_pin_MoveNorth, INPUT);
@@ -361,6 +369,23 @@ public:
         }
     }
 
+    void ManageMaxCommands()
+    {
+        if (MoveEventQueue.size() == 0)
+        {
+            return;
+        }
+        MoveEvent lastEvent = MoveEventQueue.back();
+        if (lastEvent.direction == MoveDirection::MaxNorth)
+        {
+            TryMoveNorth(true);
+        }
+        else if (lastEvent.direction == MoveDirection::MaxSouth)
+        {
+            TryMoveSouth(true);
+        }
+    }
+
     void UpdateLEDStates()
     {
         if (millis() % config.ledBlinkIntervalMs < config.ledBlinkDurationMs)
@@ -385,9 +410,11 @@ public:
         digitalWrite(relayPin, state ? LOW : HIGH);
     }
 
-    void TryMoveSouth()
+    void TryMoveSouth(bool isMaxCommand = false)
     {
-        Logger::warn(TAG, "Move South Triggered");
+        Logger::warn(TAG, "ongoingMovement: %d", ongoingMovement);
+
+        Logger::warn(TAG, "Move %s South Triggered", isMaxCommand ? "MAX" : "");
         // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_South_Val, analogRead(config.POT1_pin_MaxAngl));
         if (analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_South_Val)
         {
@@ -395,25 +422,45 @@ public:
             Logger::warn(TAG, "MAX SOUTH. Reset movements.");
             return;
         }
-        AddMoveEventQueue(MoveDirection::MoveSouth);
+        auto newMoveDirrection = isMaxCommand ? MoveDirection::MaxSouth : MoveDirection::MoveSouth;
+        ongoingMovement = MoveEventQueue.back().direction;
+        if (ongoingMovement == MoveDirection::MaxNorth || ongoingMovement == MoveDirection::MoveNorth)
+        {
+            ResetMovement();
+        }
+        if (newMoveDirrection != ongoingMovement)
+        {
+            AddMoveEventQueue(newMoveDirrection);
+        }
+        SetPositioningMode(PositionMode::Manual);
         SetRelayState(config.R2_pin_MoveNorth, false);
         delay(100);
         SetRelayState(config.R1_pin_MoveSouth, true);
         delay(100);
         SetRelayState(config.R0_pin_Power, true);
     }
-    void TryMoveNorth()
-    {
-        Logger::warn(TAG, "Move North Triggered");
-        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_North_Val, analogRead(config.POT1_pin_MaxAngl));
 
+    void TryMoveNorth(bool isMaxCommand = false)
+    {
+        Logger::warn(TAG, "ongoingMovement: %d", ongoingMovement);
+        Logger::warn(TAG, "Move %s North Triggered", isMaxCommand ? "MAX" : "");
         if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val)
         {
             ResetMovement();
             Logger::warn(TAG, "MAX NORTH. Reset movements.");
             return;
         }
-        AddMoveEventQueue(MoveDirection::MoveNorth);
+        auto newMoveDirrection = isMaxCommand ? MoveDirection::MaxNorth : MoveDirection::MoveNorth;
+        ongoingMovement = MoveEventQueue.back().direction;
+        if (ongoingMovement == MoveDirection::MaxSouth || ongoingMovement == MoveDirection::MoveSouth)
+        {
+            ResetMovement();
+        }
+        if (newMoveDirrection != ongoingMovement)
+        {
+            AddMoveEventQueue(newMoveDirrection);
+        }
+        SetPositioningMode(PositionMode::Manual);
         SetRelayState(config.R1_pin_MoveSouth, false);
         delay(100);
         SetRelayState(config.R2_pin_MoveNorth, true);
@@ -423,6 +470,7 @@ public:
 
     void ResetMovement()
     {
+        AddMoveEventQueue(MoveDirection::NoMove);
         Logger::warn(TAG, "Resetting Movement");
         SetRelayState(config.R0_pin_Power, false);
         delay(50);
