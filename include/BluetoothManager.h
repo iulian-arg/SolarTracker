@@ -46,6 +46,10 @@ public:
 
     void BT_WriteLine(const String &line)
     {
+        if (SerialBT.connected() == false)
+        {
+            return;
+        }
         SerialBT.println(line);
     }
 
@@ -60,11 +64,13 @@ public:
             if (command == String("NORTH"))
             {
                 BT_WriteLine("Moving North");
+                positionManager->SetPositioningMode(PositionMode::Manual);
                 positionManager->TryMoveNorth();
             }
             else if (command == String("SOUTH"))
             {
                 BT_WriteLine("Moving South");
+                positionManager->SetPositioningMode(PositionMode::Manual);
                 positionManager->TryMoveSouth();
             }
             else if (command == String("AUTO"))
@@ -85,11 +91,13 @@ public:
             else if (command == String("maxN"))
             {
                 BT_WriteLine("Setting Max North Position");
+                positionManager->SetPositioningMode(PositionMode::Manual);
                 positionManager->TryMoveNorth(true);
             }
             else if (command == String("maxS"))
             {
                 BT_WriteLine("Setting Max South Position");
+                positionManager->SetPositioningMode(PositionMode::Manual);
                 positionManager->TryMoveSouth(true);
             }
             else if (command == String("RESTART"))
@@ -101,13 +109,16 @@ public:
             {
                 String wifiStatus = wifiManager->GetWifiIpAndSSID();
                 BT_WriteLine(wifiStatus);
-            }
-            
+            }            
             else if (command == String("RECONNECT"))
             {
                 BT_WriteLine("Reconnecting to WiFi...");
                 wifiManager->WifiConnect();
 
+            }            
+            else if (command == String("STATUS"))
+            {
+                BT_WriteLine("");
             }
             else
             {

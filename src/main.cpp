@@ -13,7 +13,6 @@
 #include "PositionManager.h"
 #include "Logger.h"
 #include "BluetoothManager.h"
-// #include "BLEManager.h"
 
 BoardPowerManager *boardPowerManager;
 BluetoothManager *bluetoothManager;
@@ -76,7 +75,7 @@ void loop()
     auto positioningInterval =
         positionManager->GetPositioningMode() == PositionMode::Manual ||
                 positionManager->GetPositioningMode() == PositionMode::LowLight
-            ? 5 * config.positioningUpdateIntervalMs
+            ? config.positioningUpdateIntervalMsLowLight
             : config.positioningUpdateIntervalMs;
     if (millis() - previousPositioningMillis >= positioningInterval)
     {
@@ -101,6 +100,7 @@ void loop()
     for (auto &entry : logs)
     {
         asyncWebServerManager->notifyClients("LOG_ENTRY:" + entry);
+        bluetoothManager->BT_WriteLine("LOG_ENTRY:" + entry);
         // Serial.println(entry);
     }
     Logger::clearLogs();

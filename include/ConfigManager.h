@@ -37,6 +37,7 @@ struct Config
     uint8_t lightDiffTreshold;
     int lowLightTreshold;
     int positioningUpdateIntervalMs;
+    int positioningUpdateIntervalMsLowLight;
     int lightTrackingQueueSize;
     int gmtOffset_sec;
     int daylightOffset_sec;
@@ -174,7 +175,8 @@ public:
         cfg.lowLightTreshold = atoi(getConfigValue("lightSensorSettings_lowLightTreshold").c_str());
         cfg.lightTrackingQueueSize = atoi(getConfigValue("lightSensorSettings_lightTrackingQueueSize").c_str());
         cfg.positioningUpdateIntervalMs = atoi(getConfigValue("lightSensorSettings_positioningUpdateIntervalMs").c_str());
-
+        cfg.positioningUpdateIntervalMsLowLight = atoi(getConfigValue("lightSensorSettings_positioningUpdateIntervalMsLowLight").c_str());
+    
         cfg.RetryCount = (uint8_t)atoi(getConfigValue("wifis_RetryCount").c_str());
         cfg.RetryDelay = (uint16_t)atoi(getConfigValue("wifis_RetryDelay").c_str());
         cfg.RetryTotalInterval = (uint16_t)atoi(getConfigValue("wifis_RetryTotalInterval").c_str());

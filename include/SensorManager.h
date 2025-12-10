@@ -47,7 +47,7 @@ private:
     void SetupBH1750()
     {
         Wire.begin();
-        if (lightMeter_0.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23))
+        if (lightMeter_0.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x5C))
         {
             Logger::info(TAG, "BH1750_0 initialised");
         }
@@ -55,7 +55,7 @@ private:
         {
             Logger::error(TAG, "Error initialising BH1750_0");
         }
-        if (lightMeter_1.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x5C))
+        if (lightMeter_1.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23))
         {
             Logger::info(TAG, "BH1750_1 initialised");
         }
@@ -64,20 +64,6 @@ private:
             Logger::error(TAG, "Error initialising BH1750_1");
         }
     }
-
-    // float GetLuxDiff()
-    // {
-    //     float lux0 = ReadBH1750_0();
-    //     float lux1 = ReadBH1750_1();
-
-    //     return (lux0 / lux1) - 1.0;
-    // }
-    // float GetCurrentLuxAverage()
-    // {
-    //     float lux0 = ReadBH1750_0();
-    //     float lux1 = ReadBH1750_1();
-    //     return (lux0 + lux1) / 2.0;
-    // }
     float ReadBH1750_0()
     {
         float lux = lightMeter_0.readLightLevel();

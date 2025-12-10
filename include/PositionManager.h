@@ -234,7 +234,7 @@ public:
             break;
         }
 
-        Logger::info(TAG, "<s0:%.2f, s1:%.2f, <>:%d, dif:%.2f, %.2fºC, %s>",
+        Logger::info(TAG, "<0_%.0f, 1_%.0f, <>_%d, dif_%.1f, %.1fºC, %s>",
                      sensorInfo.lux_0,
                      sensorInfo.lux_1,
                      sensorInfo.angleSensorValue,
@@ -432,7 +432,6 @@ public:
         {
             AddMoveEventQueue(newMoveDirrection);
         }
-        SetPositioningMode(PositionMode::Manual);
         SetRelayState(config.R2_pin_MoveNorth, false);
         delay(100);
         SetRelayState(config.R1_pin_MoveSouth, true);
@@ -460,7 +459,6 @@ public:
         {
             AddMoveEventQueue(newMoveDirrection);
         }
-        SetPositioningMode(PositionMode::Manual);
         SetRelayState(config.R1_pin_MoveSouth, false);
         delay(100);
         SetRelayState(config.R2_pin_MoveNorth, true);
