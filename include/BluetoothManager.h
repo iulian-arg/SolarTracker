@@ -105,20 +105,27 @@ public:
                 BT_WriteLine("Restarting SolarTracker...");
                 ESP.restart();
             }
-            else if (command == String("WIFI"))
+            else if (command == String("WF_STATUS"))
             {
                 String wifiStatus = wifiManager->GetWifiIpAndSSID();
                 BT_WriteLine(wifiStatus);
             }            
-            else if (command == String("RECONNECT"))
+            else if (command == String("WF_RECONNECT"))
             {
                 BT_WriteLine("Reconnecting to WiFi...");
                 wifiManager->WifiConnect();
 
-            }            
-            else if (command == String("STATUS"))
+            }          
+            else if (command == String("WF_DISCONNECT"))
             {
-                BT_WriteLine("");
+                BT_WriteLine("Disconnecting from WiFi...");
+                wifiManager->WifiDisconnect();
+
+            }            
+            else if (command == String("UPDATE"))
+            {
+                BT_WriteLine("Updating Positioning...");
+                positionManager->UpdatePositioning();
             }
             else
             {

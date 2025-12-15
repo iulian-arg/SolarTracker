@@ -19,9 +19,31 @@ class WifiManager
 {
 
   std::vector<String> availableSSIDs;
+  TaskHandle_t Task1;
+  static void Task1code(void *parameter)
+  {
+    WifiManager *wifiManager = static_cast<WifiManager *>(parameter);
+    for (;;)
+    {
+      wifiManager->WifiConnect();
+      vTaskDelay(60000 / portTICK_PERIOD_MS); // wait 60 seconds before next connection attempt
+    }
+  }
 
 public:
   WifiManager() {}
+
+  void WifiSetupCore_0()
+  {
+    xTaskCreatePinnedToCore(
+        Task1code, /* Function to implement the task */
+        "Task1",   /* Name of the task */
+        10000,     /* Stack size in words */
+        this,      /* Task input parameter */
+        0,         /* Priority of the task */
+        &Task1,    /* Task handle. */
+        1);        /* Core where the task should run */
+  }
 
   void scanNetworks()
   {
@@ -43,6 +65,11 @@ public:
 
   void WifiConnect()
   {
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      Logger::info(TAG, "WiFi already connected");
+      return;
+    }
     WiFi.mode(WIFI_STA);
     WiFi.hostname("SolarTracker");
 
@@ -109,6 +136,19 @@ public:
     {
       return String("Not connected to WiFi");
     }
+  }
+  void WifiDisconnect()
+  {
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      WiFi.disconnect(true);
+      Logger::info(TAG, "WiFi disconnected");
+    }
+    else
+    {
+      Logger::info(TAG, "WiFi not connected. Cannot disconnect");
+    }
+
   }
 };
 #endif

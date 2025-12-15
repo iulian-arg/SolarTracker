@@ -72,7 +72,6 @@ private:
     std::vector<PositioningModeChange> positioningModeChangeQueue = std::vector<PositioningModeChange>();
     // Initialize MoveEventQueue with one default MoveEvent so back() is valid
     std::vector<MoveEvent> MoveEventQueue = std::vector<MoveEvent>(1, MoveEvent{MoveDirection::NoMove, time(nullptr)});
-    MoveDirection ongoingMovement = MoveEventQueue.back().direction;
 
 public:
     PositionManager()
@@ -193,7 +192,7 @@ public:
     void ResetMoving()
     {
         if (MoveEventQueue.size() > 0 &&
-            MoveEventQueue.back().direction == MoveDirection::NoMove)
+            getLastMoveEvent().direction == MoveDirection::NoMove)
         {
             return; // No change in move event
         }
@@ -204,7 +203,7 @@ public:
     void AddMoveEventQueue(MoveDirection direction)
     {
         if (MoveEventQueue.size() > 0 &&
-            MoveEventQueue.back().direction == direction)
+            getLastMoveEvent().direction == direction)
         {
             return; // No change in move event
         }
@@ -234,7 +233,7 @@ public:
             break;
         }
 
-        Logger::info(TAG, "<0_%.0f, 1_%.0f, <>_%d, dif_%.1f, %.1fºC, %s>",
+        Logger::info(TAG, "<0_%.1f, 1_%.1f, <>_%d, dif_%.1f, %.1fºC, %s>",
                      sensorInfo.lux_0,
                      sensorInfo.lux_1,
                      sensorInfo.angleSensorValue,
@@ -287,6 +286,11 @@ public:
     PositionMode GetPositioningMode()
     {
         return positioningModeChangeQueue.back().mode;
+    }
+
+    bool OngoingMovement()
+    {
+        return getLastMoveEvent().direction != MoveDirection::NoMove;
     }
 
     void PrintQueues()
@@ -369,13 +373,18 @@ public:
         }
     }
 
+    MoveEvent getLastMoveEvent()
+    {
+        return MoveEventQueue.back();
+    }
+
     void ManageMaxCommands()
     {
         if (MoveEventQueue.size() == 0)
         {
             return;
         }
-        MoveEvent lastEvent = MoveEventQueue.back();
+        MoveEvent lastEvent = getLastMoveEvent();
         if (lastEvent.direction == MoveDirection::MaxNorth)
         {
             TryMoveNorth(true);
@@ -412,7 +421,7 @@ public:
 
     void TryMoveSouth(bool isMaxCommand = false)
     {
-        Logger::warn(TAG, "ongoingMovement: %d", ongoingMovement);
+        Logger::warn(TAG, "ongoingMovement: %d", getLastMoveEvent().direction);
 
         Logger::warn(TAG, "Move %s South Triggered", isMaxCommand ? "MAX" : "");
         // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_South_Val, analogRead(config.POT1_pin_MaxAngl));
@@ -423,12 +432,13 @@ public:
             return;
         }
         auto newMoveDirrection = isMaxCommand ? MoveDirection::MaxSouth : MoveDirection::MoveSouth;
-        ongoingMovement = MoveEventQueue.back().direction;
-        if (ongoingMovement == MoveDirection::MaxNorth || ongoingMovement == MoveDirection::MoveNorth)
+
+        if (getLastMoveEvent().direction == MoveDirection::MaxNorth ||
+            getLastMoveEvent().direction == MoveDirection::MoveNorth)
         {
             ResetMovement();
         }
-        if (newMoveDirrection != ongoingMovement)
+        if (newMoveDirrection != getLastMoveEvent().direction)
         {
             AddMoveEventQueue(newMoveDirrection);
         }
@@ -441,7 +451,7 @@ public:
 
     void TryMoveNorth(bool isMaxCommand = false)
     {
-        Logger::warn(TAG, "ongoingMovement: %d", ongoingMovement);
+        Logger::warn(TAG, "ongoingMovement: %d", getLastMoveEvent().direction);
         Logger::warn(TAG, "Move %s North Triggered", isMaxCommand ? "MAX" : "");
         if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val)
         {
@@ -450,12 +460,12 @@ public:
             return;
         }
         auto newMoveDirrection = isMaxCommand ? MoveDirection::MaxNorth : MoveDirection::MoveNorth;
-        ongoingMovement = MoveEventQueue.back().direction;
-        if (ongoingMovement == MoveDirection::MaxSouth || ongoingMovement == MoveDirection::MoveSouth)
+        if (getLastMoveEvent().direction == MoveDirection::MaxSouth ||
+            getLastMoveEvent().direction == MoveDirection::MoveSouth)
         {
             ResetMovement();
         }
-        if (newMoveDirrection != ongoingMovement)
+        if (newMoveDirrection != getLastMoveEvent().direction)
         {
             AddMoveEventQueue(newMoveDirrection);
         }

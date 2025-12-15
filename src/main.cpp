@@ -23,6 +23,8 @@ TimeManager *timeManager;
 PositionManager *positionManager;
 AsyncWebServerManager *asyncWebServerManager;
 
+TaskHandle_t Task1;
+
 const char *TAG = "ST";
 ulong lastProgramTimestamp;
 Config config;
@@ -46,7 +48,7 @@ void setup()
    
     wifiManager = new WifiManager();
     wifiManager->WifiConnect();
-
+    // wifiManager->WifiSetupCore_0();
 
     bluetoothManager = new BluetoothManager();
     bluetoothManager->SetupBT();
@@ -77,6 +79,7 @@ void loop()
                 positionManager->GetPositioningMode() == PositionMode::LowLight
             ? config.positioningUpdateIntervalMsLowLight
             : config.positioningUpdateIntervalMs;
+            positioningInterval = positionManager->OngoingMovement() ? 100 : positioningInterval;
     if (millis() - previousPositioningMillis >= positioningInterval)
     {
         previousPositioningMillis = millis();
@@ -100,7 +103,7 @@ void loop()
     for (auto &entry : logs)
     {
         asyncWebServerManager->notifyClients("LOG_ENTRY:" + entry);
-        bluetoothManager->BT_WriteLine("LOG_ENTRY:" + entry);
+        bluetoothManager->BT_WriteLine(entry);
         // Serial.println(entry);
     }
     Logger::clearLogs();
