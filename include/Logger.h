@@ -97,4 +97,4 @@ private:
 // Static member initialization
 std::deque<String> Logger::logQueue;
 std::deque<String> Logger::logQueueLongTerm;
-size_t Logger::maxQueueSize = 1000;
+size_t Logger::maxQueueSize = 100;
