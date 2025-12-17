@@ -1,15 +1,6 @@
-// #include <SensorManager.h>
-// #include <BluetoothManager.h>
-// #include <PWMManager.h>
-// #include <analogWrite.h> // This is a library, not a header file
-// #include <WifiManager.h>
-// #include <WebServerManager.h>
-// #include <ButtonLEDManager.h>
-// #include <SPIFFS.h>
-// #include "NimBLEManager.h"
-// #include <ProgramManager.h>
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 
-#include <Arduino.h>
+// #include <Arduino.h>
 #include <WiFi.h>
 #include <Ticker.h>
 
@@ -18,23 +9,23 @@
 #include "ConfigManager.h"
 #include "WifiManager.h"
 #include "TimeManager.h"
-// #include "IOManager.h"
+#include "AsyncWebServerManager.h"
 #include "PositionManager.h"
-// #include "ButtonLEDManager.h"
-// #include "BtnLEDManager.h"
-// #include "RelayManager.h"
+#include "Logger.h"
+#include "BluetoothManager.h"
 
 BoardPowerManager *boardPowerManager;
+BluetoothManager *bluetoothManager;
 WifiManager *wifiManager;
 SensorManager *sensorManager;
 ConfigManager *configManager;
 TimeManager *timeManager;
-PositionManager *positioningManager;
-// RelayManager *relayManager;
-// ButtonLEDManager *buttonLEDManager;
-// BtnLEDManager *btnLEDManager;
-// IOManager *ioManager;
+PositionManager *positionManager;
+AsyncWebServerManager *asyncWebServerManager;
 
+TaskHandle_t Task1;
+
+const char *TAG = "ST";
 ulong lastProgramTimestamp;
 Config config;
 Ticker myTicker;
@@ -44,39 +35,33 @@ void tick();
 void setup()
 {
     Serial.begin(115200);
+    esp_log_level_set(TAG, ESP_LOG_DEBUG);
 
     boardPowerManager = new BoardPowerManager();
     boardPowerManager->InitBoardPowerManager();
 
-    // bleManager = new NimBLEManager();
-    // bleManager->setupNimBLE(currentProgram);
-    // lastProgramTimestamp = millis();
-
     configManager = new ConfigManager();
     config = configManager->readConfig();
 
+    timeManager = new TimeManager();
+    // timeManager->initTime(); // moved to WifiManager after successful WiFi connection
+   
     wifiManager = new WifiManager();
-    // wifiManager->WifiConnect(config);
+    wifiManager->WifiConnect();
+    // wifiManager->WifiSetupCore_0();
+
+    bluetoothManager = new BluetoothManager();
+    bluetoothManager->SetupBT();
 
     sensorManager = new SensorManager();
     sensorManager->SetupSensors();
 
-    timeManager = new TimeManager();
-    timeManager->initTime(config);
+    positionManager = new PositionManager();
 
-    // relayManager = new RelayManager(config);
-    // relayManager->ResetRelays();
-    // ioManager = new IOManager(config);
-    // ioManager->ResetRelays();
-
-    positioningManager = new PositionManager(config, sensorManager);
-    // ioManager->SetPositionManager(positioningManager);
-
-    // buttonLEDManager = new ButtonLEDManager(config, positioningManager);
-    // relayManager->SetButtonLEDManager(buttonLEDManager);
+    asyncWebServerManager = new AsyncWebServerManager();
+    asyncWebServerManager->initWebServer();
 
     myTicker.attach(1.0, tick);
-    config.POT1_pin_MaxAngl = 35;
 }
 unsigned long previousPositioningMillis = 0;
 unsigned long previousButtonMillis = 0;
@@ -89,24 +74,37 @@ void tick()
 }
 void loop()
 {
-    auto positioningInterval = 
-        positioningManager->GetPositioningMode() == PositionMode::Manual ||
-        positioningManager->GetPositioningMode() == PositionMode::LowLight
-        ? 5 * config.positioningUpdateIntervalMs
-        : config.positioningUpdateIntervalMs;
+    auto positioningInterval =
+        positionManager->GetPositioningMode() == PositionMode::Manual ||
+                positionManager->GetPositioningMode() == PositionMode::LowLight
+            ? config.positioningUpdateIntervalMsLowLight
+            : config.positioningUpdateIntervalMs;
+            positioningInterval = positionManager->OngoingMovement() ? 100 : positioningInterval;
     if (millis() - previousPositioningMillis >= positioningInterval)
     {
         previousPositioningMillis = millis();
 
         Serial.println();
-        timeManager->printCurrentTime();
-        positioningManager->UpdatePositioning();
+        // timeManager->printCurrentTime();
+        positionManager->UpdatePositioning();
     }
 
     if (millis() - previousButtonMillis >= 50)
     {
         previousButtonMillis = millis();
-        positioningManager->MonitorBtnStates();
-        positioningManager->UpdateLEDStates();
+        positionManager->MonitorBtnStates();
+        positionManager->UpdateLEDStates();
+        asyncWebServerManager->loopWebServer();
+        // bleManager->loopBLE();
+        bluetoothManager->BT_doWork();
+        positionManager->ManageMaxCommands();
     }
+    auto logs = Logger::getLogs();
+    for (auto &entry : logs)
+    {
+        asyncWebServerManager->notifyClients("LOG_ENTRY:" + entry);
+        bluetoothManager->BT_WriteLine(entry);
+        // Serial.println(entry);
+    }
+    Logger::clearLogs();
 }

@@ -16,8 +16,8 @@ struct RelayState
 };
 RelayState relayState;
 
-u8_t R1_pin_MoveLeft;
-u8_t R2_pin_MoveRight;
+u8_t R1_pin_MoveSouth;
+u8_t R2_pin_MoveNorth;
 u8_t R3_pin;
 u8_t POT1_pin_MaxAngl;
 u8_t R0_pin_Power;
@@ -35,21 +35,21 @@ public:
   {
     config = _config;
 
-    R1_pin_MoveLeft = config.R1_pin_MoveLeft;
-    R2_pin_MoveRight = config.R2_pin_MoveRight;
+    R1_pin_MoveSouth = config.R1_pin_MoveSouth;
+    R2_pin_MoveNorth = config.R2_pin_MoveNorth;
     R3_pin = config.R3_pin;
     POT1_pin_MaxAngl = config.POT1_pin_MaxAngl;
     R0_pin_Power = config.R0_pin_Power;
 
-    pinMode(R1_pin_MoveLeft, OUTPUT);
-    pinMode(R2_pin_MoveRight, OUTPUT);
+    pinMode(R1_pin_MoveSouth, OUTPUT);
+    pinMode(R2_pin_MoveNorth, OUTPUT);
     pinMode(R3_pin, OUTPUT);
     pinMode(POT1_pin_MaxAngl, OUTPUT);
     pinMode(R0_pin_Power, OUTPUT);
 
     SetRelayState(R0_pin_Power, false);
-    SetRelayState(R1_pin_MoveLeft, false);
-    SetRelayState(R2_pin_MoveRight, false);
+    SetRelayState(R1_pin_MoveSouth, false);
+    SetRelayState(R2_pin_MoveNorth, false);
     SetRelayState(R3_pin, false);
     SetRelayState(POT1_pin_MaxAngl, false);
   }
@@ -67,21 +67,21 @@ public:
   {
     if (btnLEDManager->IsMaxLeft())
     {
-      Serial.println("At Max Left Position. Cannot Move Left.");
+      Serial.println("At Max Left Position. Cannot Move South.");
       return;
     }
 
-    SetRelayState(R1_pin_MoveLeft, true);
+    SetRelayState(R1_pin_MoveSouth, true);
   }
   void TriggerMoveRight()
   {
     if (btnLEDManager->IsMaxRight())
     {
-      Serial.println("At Max Right Position. Cannot Move Right.");
+      Serial.println("At Max Right Position. Cannot Move North.");
       return;
     }
 
-    SetRelayState(R2_pin_MoveRight, true);
+    SetRelayState(R2_pin_MoveNorth, true);
   }
 
   void TriggerR3()
@@ -101,8 +101,8 @@ public:
   void ResetRelays()
   {
     Serial.println("Resetting Relays");
-    SetRelayState(R1_pin_MoveLeft, false);
-    SetRelayState(R2_pin_MoveRight, false);
+    SetRelayState(R1_pin_MoveSouth, false);
+    SetRelayState(R2_pin_MoveNorth, false);
     SetRelayState(R3_pin, false);
     SetRelayState(POT1_pin_MaxAngl, false);
   }

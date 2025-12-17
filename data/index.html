@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Solar Tracker Controller</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+    <div class="topnav">
+        <h1>Solar Tracker Controller</h1>
+    </div>
+    <div class="content">
+        <div class="preset-container">
+            <input type="button" class="btn btn-first btn-pressed" value="MOVE_NORTH"
+                onmousedown="sendCommand(this, 'MOVE_NORTH_down')" onmouseup="sendCommand(this, 'MOVE_NORTH_up')" />
+            <input type="button" class="btn btn-first btn-pressed" value="MOVE_SOUTH"
+                onmousedown="sendCommand(this, 'MOVE_SOUTH_down')" onmouseup="sendCommand(this, 'MOVE_SOUTH_up')" />
+            <input type="button" class="btn btn-first btn-pressed" value="MOVE_MAX_NORTH"
+                onmousedown="sendCommand(this, 'MOVE_MAX_NORTH_down')" onmouseup="sendCommand(this, 'MOVE_MAX_NORTH_up')" />
+            <input type="button" class="btn btn-first btn-pressed" value="MOVE_MAX_SOUTH"
+                onmousedown="sendCommand(this, 'MOVE_MAX_SOUTH_down')" onmouseup="sendCommand(this, 'MOVE_MAX_SOUTH_up')" />
+        </div>
+        <div class="preset-container">
+            <input type="button" class="btn btn-first" onclick="sendCommand(this, 'AUTO_MODE')" value="AUTO_MODE" />
+            <input type="button" class="btn btn-first" onclick="sendCommand(this, 'MANUAL_MODE')" value="MANUAL_MODE" />
+            <input type="button" class="btn btn-first" onclick="sendCommand(this, 'RESET')" value="RESET" />
+        </div>
+        <div class="log-container">
+            <h2>Log</h2>
+            <textarea id="logArea" readonly placeholder="Logs will appear here"
+                style="width:100%;height:120px;font-family:monospace;"></textarea>
+            <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+                <input type="button" class="btn" value="Clear Log" onclick="clearLog()" />
+                <label style="font-size:0.9em;display:flex;align-items:center;gap:6px;">
+                    <input id="autoScroll" type="checkbox" checked onchange="onLogSettingChange()" /> Auto-scroll
+                </label>
+            </div>
+        </div>
+
+        <div class="config-container">
+            <h2>config Editor</h2>
+            <textarea id="configEditor" placeholder="config document will appear here"
+                style="width:100%;height:200px;font-family:monospace;"></textarea>
+            <div style="margin-top:8px;">
+                <input type="button" class="btn" value="Get config" onclick="getconfig()" />
+                <input type="button" class="btn" value="Send config" onclick="sendconfig()" />
+            </div>
+            <div id="configStatus" style="margin-top:6px;color:#333;font-size:0.9em;"></div>
+        </div>
+        <div class="preset-container">
+            <input type="button" class="btn btn-first" onclick="sendCommand(this, 'RESTART')" value="RESTART" />
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

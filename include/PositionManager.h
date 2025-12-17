@@ -28,8 +28,8 @@ enum BtnState
 enum BtnCommand
 {
     _none,
-    _moveRight,
-    _moveLeft,
+    _moveNorth,
+    _moveSouth,
     _manualMode,
     _automaticMode,
 };
@@ -42,9 +42,11 @@ enum PositionMode
 };
 enum MoveDirection
 {
-    MoveLeft = -1,
+    MaxSouth = -2,
+    MoveSouth = -1,
     NoMove = 0,
-    MoveRight = 1
+    MoveNorth = 1,
+    MaxNorth = 2
 };
 struct PositioningModeChange
 {
@@ -56,34 +58,24 @@ struct MoveEvent
     MoveDirection direction;
     time_t timestamp;
 };
-// IOManager *ioManager;
 
-// uint8_t queueSize = 30;
-
+extern Config config;
+extern SensorManager *sensorManager;
 class PositionManager
 {
 private:
-    Config config;
-    SensorManager *sensorManager;
     SensorInfo sensorInfo;
     uint8_t previousBtnPressed = 0;
 
     std::vector<float> LuxDiffQueue = std::vector<float>();
     std::vector<float> LuxAVGQueue = std::vector<float>();
     std::vector<PositioningModeChange> positioningModeChangeQueue = std::vector<PositioningModeChange>();
-    std::vector<MoveEvent> MoveEventQueue = std::vector<MoveEvent>();
+    // Initialize MoveEventQueue with one default MoveEvent so back() is valid
+    std::vector<MoveEvent> MoveEventQueue = std::vector<MoveEvent>(1, MoveEvent{MoveDirection::NoMove, time(nullptr)});
 
 public:
-    PositionManager(
-        Config _config,
-        SensorManager *_sensorManager
-        // ,
-        // IOManager *_ioManager
-    )
+    PositionManager()
     {
-        config = _config;               // Dynamically allocate and copy the config
-        sensorManager = _sensorManager; // This will use the copy assignment operator
-        // ioManager = _ioManager;   // This will use the copy assignment operator
         SetPositioningMode(PositionMode::Automatic);
         positioningModeChangeQueue.reserve(config.lightTrackingQueueSize);
         positioningModeChangeQueue.push_back({PositionMode::Automatic, time(nullptr)});
@@ -92,24 +84,26 @@ public:
         LuxDiffQueue.reserve(config.lightTrackingQueueSize);
         LuxDiffQueue.push_back(100);
         MoveEventQueue.reserve(config.lightTrackingQueueSize);
-
-        config = _config;
+        if (MoveEventQueue.empty())
+        {
+            MoveEventQueue.push_back({MoveDirection::NoMove, time(nullptr)});
+        }
 
         pinMode(config.B1_pin_Auto, INPUT);
-        pinMode(config.B2_pin_MoveRight, INPUT);
-        pinMode(config.B3_pin_MoveLeft, INPUT);
+        pinMode(config.B2_pin_MoveNorth, INPUT);
+        pinMode(config.B3_pin_MoveSouth, INPUT);
         // pinMode(config.LED1_pin_Auto, OUTPUT);
         // digitalWrite(config.LED1_pin_Auto, LOW);
 
         pinMode(config.R0_pin_Power, OUTPUT);
-        pinMode(config.R1_pin_MoveLeft, OUTPUT);
-        pinMode(config.R2_pin_MoveRight, OUTPUT);
+        pinMode(config.R1_pin_MoveSouth, OUTPUT);
+        pinMode(config.R2_pin_MoveNorth, OUTPUT);
         // pinMode(config.R3_pin, OUTPUT);
         pinMode(config.POT1_pin_MaxAngl, INPUT);
 
         SetRelayState(config.R0_pin_Power, false);
-        SetRelayState(config.R1_pin_MoveLeft, false);
-        SetRelayState(config.R2_pin_MoveRight, false);
+        SetRelayState(config.R1_pin_MoveSouth, false);
+        SetRelayState(config.R2_pin_MoveNorth, false);
         // SetRelayState(config.R3_pin, false);
     }
 
@@ -127,8 +121,6 @@ public:
         {
             LuxAVGQueue.erase(LuxAVGQueue.begin());
         }
-        // Serial.printf("Lux Average: %.2f, Lux Difference: %.2f\n",
-        //     luxAVGCurrent, luxDiffCurrent);
     }
 
     MoveDirection CheckPositionChangeNeeded()
@@ -150,11 +142,11 @@ public:
             }
             if (positiveCount == LuxDiffQueue.size())
             {
-                return MoveDirection::MoveRight;
+                return MoveDirection::MoveNorth;
             }
             else if (negativeCount == LuxDiffQueue.size())
             {
-                return MoveDirection::MoveLeft;
+                return MoveDirection::MoveSouth;
             }
         }
         return MoveDirection::NoMove;
@@ -170,16 +162,13 @@ public:
         if (currentMode == PositionMode::Automatic)
         {
             MoveDirection positionChange = CheckPositionChangeNeeded();
-            if (positionChange == MoveDirection::MoveRight)
+            if (positionChange == MoveDirection::MoveNorth)
             {
-
-                // Serial.println("UpdatePositioning: Move Right Triggered");
-                TryMoveRight();
+                TryMoveNorth();
             }
-            else if (positionChange == MoveDirection::MoveLeft)
+            else if (positionChange == MoveDirection::MoveSouth)
             {
-                // Serial.println("UpdatePositioning: Move Left Triggered");
-                TryMoveLeft();
+                TryMoveSouth();
             }
             else
             {
@@ -196,26 +185,25 @@ public:
         }
         else
         {
-            Serial.println("Unknown positioning mode.");
+            Logger::warn(TAG, "Unknown positioning mode.");
         }
     }
 
     void ResetMoving()
     {
         if (MoveEventQueue.size() > 0 &&
-            MoveEventQueue.back().direction == MoveDirection::NoMove)
+            getLastMoveEvent().direction == MoveDirection::NoMove)
         {
             return; // No change in move event
         }
-        Serial.println("ResetMoving");
-        // ioManager->ResetRelays();
+        ResetMovement();
         AddMoveEventQueue(MoveDirection::NoMove);
     }
 
     void AddMoveEventQueue(MoveDirection direction)
     {
         if (MoveEventQueue.size() > 0 &&
-            MoveEventQueue.back().direction == direction)
+            getLastMoveEvent().direction == direction)
         {
             return; // No change in move event
         }
@@ -228,22 +216,30 @@ public:
 
     void PrintPositioningMode()
     {
-        Serial.print("Current Positioning Mode: ");
+        String posMode;
         switch (positioningModeChangeQueue.back().mode)
         {
         case PositionMode::Manual:
-            Serial.println("MANUAL");
+            posMode = "MAN";
             break;
         case PositionMode::Automatic:
-            Serial.println("AUTOMATIC");
+            posMode = "AUTO";
             break;
         case PositionMode::LowLight:
-            Serial.println("LOW LIGHT");
+            posMode = "LOW";
             break;
         default:
-            Serial.println("UNKNOWN");
+            posMode = "UNKNOWN";
             break;
         }
+
+        Logger::info(TAG, "<0_%.1f, 1_%.1f, <>_%d, dif_%.1f, %.1fºC, %s>",
+                     sensorInfo.lux_0,
+                     sensorInfo.lux_1,
+                     sensorInfo.angleSensorValue,
+                     sensorInfo.luxDiffPercent,
+                     sensorInfo.temperatureC,
+                     posMode.c_str());
     }
 
     void SetPositioningMode(PositionMode mode)
@@ -251,25 +247,25 @@ public:
         if (positioningModeChangeQueue.size() > 0 &&
             positioningModeChangeQueue.back().mode == mode)
         {
-            // Serial.println("Positioning mode unchanged.");
             return; // No change in mode
         }
-        Serial.print("Changing Positioning Mode from ");
+        String msg = "Changing Positioning Mode from ";
         if (positioningModeChangeQueue.size() > 0)
         {
-            Serial.print(GetPositioningModeString(positioningModeChangeQueue.back()));
+            msg += GetPositioningModeString(positioningModeChangeQueue.back());
         }
         else
         {
-            Serial.print("NONE");
+            msg += "NONE";
         }
-        Serial.print("to: ");
+        msg += " to: ";
         positioningModeChangeQueue.push_back({mode, time(nullptr)});
         if (positioningModeChangeQueue.size() > config.lightTrackingQueueSize)
         {
             positioningModeChangeQueue.erase(positioningModeChangeQueue.begin());
         }
-        Serial.println(GetPositioningModeString(positioningModeChangeQueue.back()));
+        msg += GetPositioningModeString(positioningModeChangeQueue.back());
+        Logger::warn(TAG, msg.c_str());
     }
 
     String GetPositioningModeString(PositioningModeChange modeChange)
@@ -277,13 +273,13 @@ public:
         switch (modeChange.mode)
         {
         case PositionMode::Manual:
-            return "MANUAL " + String(modeChange.timestamp);
+            return "MANUAL ";
         case PositionMode::Automatic:
-            return "AUTOMATIC " + String(modeChange.timestamp);
+            return "AUTOMATIC ";
         case PositionMode::LowLight:
-            return "LOW LIGHT " + String(modeChange.timestamp);
+            return "LOW LIGHT ";
         default:
-            return "UNKNOWN " + String(modeChange.timestamp);
+            return "UNKNOWN ";
         }
     }
 
@@ -292,20 +288,25 @@ public:
         return positioningModeChangeQueue.back().mode;
     }
 
+    bool OngoingMovement()
+    {
+        return getLastMoveEvent().direction != MoveDirection::NoMove;
+    }
+
     void PrintQueues()
     {
-        Serial.print("-- DIFF :");
+        String msg = "-- DIFF :";
         for (const float &entry : LuxDiffQueue)
         {
-            Serial.printf("%.2f  ", entry);
+            msg += String(" %.2f  ", entry);
         }
-        Serial.println();
-        Serial.print("-- AVG :");
+        Logger::info(TAG, msg.c_str());
+        msg = "-- AVG :";
         for (const float &entry : LuxAVGQueue)
         {
-            Serial.printf("%.2f ", entry);
+            msg += String(" %.2f  ", entry);
         }
-        Serial.println();
+        Logger::info(TAG, msg.c_str());
     }
 
     void CheckForLowLight()
@@ -335,30 +336,42 @@ public:
     void MonitorBtnStates()
     {
         BtnState b1_pin_Auto_state = digitalRead(config.B1_pin_Auto) == HIGH ? _pressed : _notPressed;
-        BtnState b2_pin_MoveRight_state = digitalRead(config.B2_pin_MoveRight) == HIGH ? _pressed : _notPressed;
-        BtnState b3_pin_MoveLeft_state = digitalRead(config.B3_pin_MoveLeft) == HIGH ? _pressed : _notPressed;
+        BtnState B2_pin_MoveNorth_state = digitalRead(config.B2_pin_MoveNorth) == HIGH ? _pressed : _notPressed;
+        BtnState B3_pin_MoveSouth_state = digitalRead(config.B3_pin_MoveSouth) == HIGH ? _pressed : _notPressed;
 
-        if (b2_pin_MoveRight_state == _pressed &&
-            previousBtnPressed != config.B2_pin_MoveRight)
+        if (B2_pin_MoveNorth_state == _pressed &&
+            previousBtnPressed != config.B2_pin_MoveNorth)
         {
-            previousBtnPressed = config.B2_pin_MoveRight;
-            // Serial.println("Move Right Btn _pressed");
+            // start move north
+            previousBtnPressed = config.B2_pin_MoveNorth;
             SetPositioningMode(PositionMode::Manual);
-            TryMoveRight();
+            TryMoveNorth();
         }
-        else if (b3_pin_MoveLeft_state == _pressed &&
-                 previousBtnPressed != config.B3_pin_MoveLeft)
+        else if (B2_pin_MoveNorth_state == _pressed &&
+                 previousBtnPressed == config.B2_pin_MoveNorth && isMaxNorth())
         {
-            previousBtnPressed = config.B3_pin_MoveLeft;
-            // Serial.println("Move Left Btn _pressed");
+            // reached max north while holding button
+            ResetMovement();
+            Logger::warn(TAG, "MAX NORTH while holding button. Reset movements.");
+        }
+        else if (B3_pin_MoveSouth_state == _pressed &&
+                 previousBtnPressed != config.B3_pin_MoveSouth)
+        {
+            previousBtnPressed = config.B3_pin_MoveSouth;
             SetPositioningMode(PositionMode::Manual);
-            TryMoveLeft();
+            TryMoveSouth();
+        }
+        else if (B3_pin_MoveSouth_state == _pressed &&
+                 previousBtnPressed == config.B3_pin_MoveSouth && isMaxSouth())
+        {
+            // reached max south while holding button
+            ResetMovement();
+            Logger::warn(TAG, "MAX SOUTH while holding button. Reset movements.");
         }
         else if (b1_pin_Auto_state == _pressed &&
                  previousBtnPressed != config.B1_pin_Auto)
         {
             previousBtnPressed = config.B1_pin_Auto;
-            // Serial.println("Automatic Mode Btn _pressed");
             if (GetPositioningMode() == PositionMode::Manual)
             {
                 SetPositioningMode(PositionMode::Automatic);
@@ -366,12 +379,34 @@ public:
         }
         else if (previousBtnPressed != 0 &&
                  b1_pin_Auto_state == _notPressed &&
-                 b2_pin_MoveRight_state == _notPressed &&
-                 b3_pin_MoveLeft_state == _notPressed)
+                 B2_pin_MoveNorth_state == _notPressed &&
+                 B3_pin_MoveSouth_state == _notPressed)
         {
-            Serial.println("Btn Released, Resetting Movement");
+            Logger::warn(TAG, "Btn Released, Resetting Movement");
             previousBtnPressed = 0;
             ResetMoving();
+        }
+    }
+
+    MoveEvent getLastMoveEvent()
+    {
+        return MoveEventQueue.back();
+    }
+
+    void ManageMaxCommands()
+    {
+        if (MoveEventQueue.size() == 0)
+        {
+            return;
+        }
+        MoveEvent lastEvent = getLastMoveEvent();
+        if (lastEvent.direction == MoveDirection::MaxNorth)
+        {
+            TryMoveNorth(true);
+        }
+        else if (lastEvent.direction == MoveDirection::MaxSouth)
+        {
+            TryMoveSouth(true);
         }
     }
 
@@ -399,39 +434,81 @@ public:
         digitalWrite(relayPin, state ? LOW : HIGH);
     }
 
-    void TryMoveLeft()
+    bool isMaxNorth()
     {
-        Serial.println("Move Left Triggered");
-        Serial.printf("\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Left_Val, analogRead(config.POT1_pin_MaxAngl));
-        if (analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_Left_Val)
-        {
-            ResetMovement();
-            Serial.println("MAX LEFT. Reset movements.");
-            return;
-        }
-        AddMoveEventQueue(MoveDirection::MoveLeft);
-        SetRelayState(config.R1_pin_MoveLeft, true);
+        return analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val;
     }
-    void TryMoveRight()
+    bool isMaxSouth()
     {
-        Serial.println("Move Right Triggered");
-        Serial.printf("\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_Right_Val, analogRead(config.POT1_pin_MaxAngl));
+        return analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_South_Val;
+    }
 
-        if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_Right_Val)
+    void TryMoveSouth(bool isMaxCommand = false)
+    {
+        Logger::warn(TAG, "ongoingMovement: %d", getLastMoveEvent().direction);
+
+        Logger::warn(TAG, "Move %s South Triggered", isMaxCommand ? "MAX" : "");
+        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_South_Val, analogRead(config.POT1_pin_MaxAngl));
+        if (isMaxSouth())
         {
             ResetMovement();
-            Serial.println("MAX RIGHT. Reset movements.");
+            Logger::warn(TAG, "MAX SOUTH. Reset movements.");
             return;
         }
-        AddMoveEventQueue(MoveDirection::MoveRight);
-        SetRelayState(config.R2_pin_MoveRight, true);
+        auto newMoveDirrection = isMaxCommand ? MoveDirection::MaxSouth : MoveDirection::MoveSouth;
+
+        if (getLastMoveEvent().direction == MoveDirection::MaxNorth ||
+            getLastMoveEvent().direction == MoveDirection::MoveNorth)
+        {
+            ResetMovement();
+        }
+        if (newMoveDirrection != getLastMoveEvent().direction)
+        {
+            AddMoveEventQueue(newMoveDirrection);
+        }
+        SetRelayState(config.R2_pin_MoveNorth, false);
+        delay(100);
+        SetRelayState(config.R1_pin_MoveSouth, true);
+        delay(100);
+        SetRelayState(config.R0_pin_Power, true);
+    }
+
+    void TryMoveNorth(bool isMaxCommand = false)
+    {
+        Logger::warn(TAG, "ongoingMovement: %d", getLastMoveEvent().direction);
+        Logger::warn(TAG, "Move %s North Triggered", isMaxCommand ? "MAX" : "");
+        if (isMaxNorth())
+        {
+            ResetMovement();
+            Logger::warn(TAG, "MAX NORTH. Reset movements.");
+            return;
+        }
+        auto newMoveDirrection = isMaxCommand ? MoveDirection::MaxNorth : MoveDirection::MoveNorth;
+        if (getLastMoveEvent().direction == MoveDirection::MaxSouth ||
+            getLastMoveEvent().direction == MoveDirection::MoveSouth)
+        {
+            ResetMovement();
+        }
+        if (newMoveDirrection != getLastMoveEvent().direction)
+        {
+            AddMoveEventQueue(newMoveDirrection);
+        }
+        SetRelayState(config.R1_pin_MoveSouth, false);
+        delay(100);
+        SetRelayState(config.R2_pin_MoveNorth, true);
+        delay(100);
+        SetRelayState(config.R0_pin_Power, true);
     }
 
     void ResetMovement()
     {
-        Serial.println("Resetting Movement");
-        SetRelayState(config.R1_pin_MoveLeft, false);
-        SetRelayState(config.R2_pin_MoveRight, false);
+        AddMoveEventQueue(MoveDirection::NoMove);
+        Logger::warn(TAG, "Resetting Movement");
+        SetRelayState(config.R0_pin_Power, false);
+        delay(50);
+        SetRelayState(config.R1_pin_MoveSouth, false);
+        SetRelayState(config.R2_pin_MoveNorth, false);
+        delay(50);
     }
 };
 #endif

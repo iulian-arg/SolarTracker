@@ -8,6 +8,11 @@
 
 #include <BH1750.h>
 #include <Wire.h>
+#include "ConfigManager.h"
+
+#include "Logger.h"
+extern const char *TAG;
+extern Config config;
 
 // #define TEMT6000_0 32 // PIN on TEMT6000
 // #define TEMT6000_1 33
@@ -25,6 +30,7 @@ struct SensorInfo
     float lux_1;
     float luxAverage;
     float luxDiffPercent;
+    int angleSensorValue;
 };
 
 class SensorManager
@@ -32,13 +38,6 @@ class SensorManager
 private:
     BH1750 lightMeter_0;
     BH1750 lightMeter_1;
-
-    void SetupTEMT6K()
-    {
-        // pinMode(TEMT6000_0, INPUT);
-        // pinMode(TEMT6000_1, INPUT);
-        // Serial.println(F("TEMT6000 initialised"));
-    }
 
     void SetupTeperatureSensor()
     {
@@ -48,37 +47,23 @@ private:
     void SetupBH1750()
     {
         Wire.begin();
-        if (lightMeter_0.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23))
+        if (lightMeter_0.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x5C))
         {
-            Serial.println(F("BH1750_0 initialised"));
+            Logger::info(TAG, "BH1750_0 initialised");
         }
         else
         {
-            Serial.println(F("Error initialising BH1750_0"));
+            Logger::error(TAG, "Error initialising BH1750_0");
         }
-        if (lightMeter_1.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x5C))
+        if (lightMeter_1.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23))
         {
-            Serial.println(F("BH1750_1 initialised"));
+            Logger::info(TAG, "BH1750_1 initialised");
         }
         else
         {
-            Serial.println(F("Error initialising BH1750_1"));
+            Logger::error(TAG, "Error initialising BH1750_1");
         }
     }
-
-    // float GetLuxDiff()
-    // {
-    //     float lux0 = ReadBH1750_0();
-    //     float lux1 = ReadBH1750_1();
-
-    //     return (lux0 / lux1) - 1.0;
-    // }
-    // float GetCurrentLuxAverage()
-    // {
-    //     float lux0 = ReadBH1750_0();
-    //     float lux1 = ReadBH1750_1();
-    //     return (lux0 + lux1) / 2.0;
-    // }
     float ReadBH1750_0()
     {
         float lux = lightMeter_0.readLightLevel();
@@ -90,37 +75,22 @@ private:
         return lux;
     }
 
-    void ReadTemp()
-    {
-        sensors.requestTemperatures();
-        float temperatureC = sensors.getTempCByIndex(0);
-        Serial.print(temperatureC);
-        Serial.println("ºC");
-        // delay(5);
-    }
     float GetSensorTemperature()
     {
         sensors.requestTemperatures();
         float temperatureC = sensors.getTempCByIndex(0);
         return temperatureC;
     }
-    /**
-        int ReadTEMT6K_0()
-        {
-            int lightLevel = analogRead(TEMT6000_0);
-            return lightLevel;
-        }
 
-        int ReadTEMT6K_1()
-        {
-            int lightLevel = analogRead(TEMT6000_1);
-            return lightLevel;
-        }
-    */
+    int ReadAngleSensor()
+    {
+        int angleVal = analogRead(config.POT1_pin_MaxAngl);
+        return angleVal;
+    }
+
 public:
     void SetupSensors()
     {
-        SetupTEMT6K();
         SetupTeperatureSensor();
         SetupBH1750();
     }
@@ -129,6 +99,7 @@ public:
     {
         SensorInfo sensorInfo;
         sensorInfo.temperatureC = GetSensorTemperature();
+        sensorInfo.angleSensorValue = ReadAngleSensor();
         sensorInfo.lux_0 = ReadBH1750_0();
         sensorInfo.lux_0 = sensorInfo.lux_0 <= 0 ? 0.1 : sensorInfo.lux_0;
         sensorInfo.lux_1 = ReadBH1750_1();
@@ -137,14 +108,7 @@ public:
         sensorInfo.luxDiffPercent =
             sensorInfo.lux_0 >= sensorInfo.lux_1 ? -sensorInfo.lux_1 / sensorInfo.lux_0 * 100.0
                                                  : sensorInfo.lux_0 / sensorInfo.lux_1 * 100.0;
-        Serial.println("");
-        Serial.printf("<0, 1, avg, diff, temp>: <%.2f, %.2f, %.2f, %.2f, %.2f>\n",
-                      sensorInfo.lux_0,
-                      sensorInfo.lux_1,
-                      sensorInfo.luxAverage,
-                      sensorInfo.luxDiffPercent,
-                      sensorInfo.temperatureC);
-        // sensorInfo.luxDiffPercent =GetLuxDiff();
+
         return sensorInfo;
     }
 };
