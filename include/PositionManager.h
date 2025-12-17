@@ -342,9 +342,17 @@ public:
         if (B2_pin_MoveNorth_state == _pressed &&
             previousBtnPressed != config.B2_pin_MoveNorth)
         {
+            // start move north
             previousBtnPressed = config.B2_pin_MoveNorth;
             SetPositioningMode(PositionMode::Manual);
             TryMoveNorth();
+        }
+        else if (B2_pin_MoveNorth_state == _pressed &&
+                 previousBtnPressed == config.B2_pin_MoveNorth && isMaxNorth())
+        {
+            // reached max north while holding button
+            ResetMovement();
+            Logger::warn(TAG, "MAX NORTH while holding button. Reset movements.");
         }
         else if (B3_pin_MoveSouth_state == _pressed &&
                  previousBtnPressed != config.B3_pin_MoveSouth)
@@ -352,6 +360,13 @@ public:
             previousBtnPressed = config.B3_pin_MoveSouth;
             SetPositioningMode(PositionMode::Manual);
             TryMoveSouth();
+        }
+        else if (B3_pin_MoveSouth_state == _pressed &&
+                 previousBtnPressed == config.B3_pin_MoveSouth && isMaxSouth())
+        {
+            // reached max south while holding button
+            ResetMovement();
+            Logger::warn(TAG, "MAX SOUTH while holding button. Reset movements.");
         }
         else if (b1_pin_Auto_state == _pressed &&
                  previousBtnPressed != config.B1_pin_Auto)
@@ -419,13 +434,22 @@ public:
         digitalWrite(relayPin, state ? LOW : HIGH);
     }
 
+    bool isMaxNorth()
+    {
+        return analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val;
+    }
+    bool isMaxSouth()
+    {
+        return analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_South_Val;
+    }
+
     void TryMoveSouth(bool isMaxCommand = false)
     {
         Logger::warn(TAG, "ongoingMovement: %d", getLastMoveEvent().direction);
 
         Logger::warn(TAG, "Move %s South Triggered", isMaxCommand ? "MAX" : "");
         // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_South_Val, analogRead(config.POT1_pin_MaxAngl));
-        if (analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_South_Val)
+        if (isMaxSouth())
         {
             ResetMovement();
             Logger::warn(TAG, "MAX SOUTH. Reset movements.");
@@ -453,7 +477,7 @@ public:
     {
         Logger::warn(TAG, "ongoingMovement: %d", getLastMoveEvent().direction);
         Logger::warn(TAG, "Move %s North Triggered", isMaxCommand ? "MAX" : "");
-        if (analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val)
+        if (isMaxNorth())
         {
             ResetMovement();
             Logger::warn(TAG, "MAX NORTH. Reset movements.");
