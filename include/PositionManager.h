@@ -2,13 +2,6 @@
 #ifndef PositionManager_H
 #define PositionManager_H
 
-// #include <Arduino.h>
-// #include <time.h>
-// #include "ConfigManager.h"
-// #include "SensorManager.h"
-// #include "RelayManager.h"
-// #include "IOManager.h"
-
 #include <vector>
 
 struct RelayState
@@ -80,12 +73,13 @@ public:
         positioningModeChangeQueue.reserve(config.lightTrackingQueueSize);
         positioningModeChangeQueue.push_back({PositionMode::Automatic, time(nullptr)});
         LuxAVGQueue.reserve(config.lightTrackingQueueSize);
-        LuxAVGQueue.push_back(0.1);
         LuxDiffQueue.reserve(config.lightTrackingQueueSize);
-        LuxDiffQueue.push_back(100);
         MoveEventQueue.reserve(config.lightTrackingQueueSize);
-        if (MoveEventQueue.empty())
+        // populate default values for queues
+        for (auto i = 0; i < config.lightTrackingQueueSize; i++)
         {
+            LuxAVGQueue.push_back(50);
+            LuxDiffQueue.push_back(100);
             MoveEventQueue.push_back({MoveDirection::NoMove, time(nullptr)});
         }
 
@@ -105,6 +99,7 @@ public:
         SetRelayState(config.R1_pin_MoveSouth, false);
         SetRelayState(config.R2_pin_MoveNorth, false);
         // SetRelayState(config.R3_pin, false);
+        // PrintQueues();
     }
 
     void ReadLightSensors()
@@ -140,6 +135,8 @@ public:
                     negativeCount++;
                 }
             }
+            // Serial.printf("Positive Count: %d, Negative Count: %d, luxdiff: %d\n",
+            //     positiveCount, negativeCount, LuxDiffQueue.size());
             if (positiveCount == LuxDiffQueue.size())
             {
                 return MoveDirection::MoveNorth;
@@ -164,20 +161,34 @@ public:
             MoveDirection positionChange = CheckPositionChangeNeeded();
             if (positionChange == MoveDirection::MoveNorth)
             {
-                TryMoveNorth();
+                if (!isMaxNorth())
+                {
+                    AddMoveEventQueue(MoveDirection::MoveNorth, 1);
+                }
+                else
+                {
+                    AddMoveEventQueue(MoveDirection::NoMove, 2);
+                }
             }
             else if (positionChange == MoveDirection::MoveSouth)
             {
-                TryMoveSouth();
+                if (!isMaxSouth())
+                {
+                    AddMoveEventQueue(MoveDirection::MoveSouth, 4);
+                }
+                else
+                {
+                    AddMoveEventQueue(MoveDirection::NoMove, 5);
+                }
             }
             else
             {
-                ResetMoving();
+                AddMoveEventQueue(MoveDirection::NoMove, 6);
             }
         }
         else if (currentMode == PositionMode::LowLight)
         {
-            return;
+            AddMoveEventQueue(MoveDirection::NoMove, 6);
         }
         else if (currentMode == PositionMode::Manual)
         {
@@ -188,25 +199,42 @@ public:
             Logger::warn(TAG, "Unknown positioning mode.");
         }
     }
-
-    void ResetMoving()
+    //////////////////////////////////////////////////////////////////////
+    void RefreshPositioning()
     {
-        if (MoveEventQueue.size() > 0 &&
-            getLastMoveEvent().direction == MoveDirection::NoMove)
+        auto previousMove = getPreviousMoveEvent().direction;
+        switch (getCurrentMoveEvent().direction)
         {
-            return; // No change in move event
+        case MoveDirection::MoveNorth:
+            TryMoveNorth();
+            break;
+        case MoveDirection::MoveSouth:
+            TryMoveSouth();
+            break;
+        case MoveDirection::MaxNorth:
+            TryMoveNorth(true);
+            break;
+        case MoveDirection::MaxSouth:
+            TryMoveSouth(true);
+            break;
+        case MoveDirection::NoMove:
+            if (previousMove != MoveDirection::NoMove)
+            {
+                // Serial.println("Stopping Movement as per NoMove command");
+                ResetMovement();
+            }
+            break;
         }
-        ResetMovement();
-        AddMoveEventQueue(MoveDirection::NoMove);
     }
 
-    void AddMoveEventQueue(MoveDirection direction)
+    void AddMoveEventQueue(MoveDirection direction, int source = -1)
     {
-        if (MoveEventQueue.size() > 0 &&
-            getLastMoveEvent().direction == direction)
+        if (getCurrentMoveEvent().direction == direction &&
+            getPreviousMoveEvent().direction == direction)
         {
             return; // No change in move event
         }
+        Serial.printf("Adding Move Event: %d from %d\n", direction, source);
         MoveEventQueue.push_back({direction, time(nullptr)});
         if (MoveEventQueue.size() > config.lightTrackingQueueSize)
         {
@@ -288,24 +316,20 @@ public:
         return positioningModeChangeQueue.back().mode;
     }
 
-    bool OngoingMovement()
-    {
-        return getLastMoveEvent().direction != MoveDirection::NoMove;
-    }
-
     void PrintQueues()
     {
-        String msg = "-- DIFF :";
+        String msg = "-- DIFF_ :";
         for (const float &entry : LuxDiffQueue)
         {
-            msg += String(" %.2f  ", entry);
+            msg += String("%.1f_", entry);
         }
         Logger::info(TAG, msg.c_str());
-        msg = "-- AVG :";
+        msg = "-- AVG_ :";
         for (const float &entry : LuxAVGQueue)
         {
-            msg += String(" %.2f  ", entry);
+            msg += String("%.1f_", entry);
         }
+
         Logger::info(TAG, msg.c_str());
     }
 
@@ -345,37 +369,21 @@ public:
             // start move north
             previousBtnPressed = config.B2_pin_MoveNorth;
             SetPositioningMode(PositionMode::Manual);
-            TryMoveNorth();
-        }
-        else if (B2_pin_MoveNorth_state == _pressed &&
-                 previousBtnPressed == config.B2_pin_MoveNorth && isMaxNorth())
-        {
-            // reached max north while holding button
-            ResetMovement();
-            Logger::warn(TAG, "MAX NORTH while holding button. Reset movements.");
+            AddMoveEventQueue(MoveDirection::MoveNorth, 7);
         }
         else if (B3_pin_MoveSouth_state == _pressed &&
                  previousBtnPressed != config.B3_pin_MoveSouth)
         {
             previousBtnPressed = config.B3_pin_MoveSouth;
             SetPositioningMode(PositionMode::Manual);
-            TryMoveSouth();
-        }
-        else if (B3_pin_MoveSouth_state == _pressed &&
-                 previousBtnPressed == config.B3_pin_MoveSouth && isMaxSouth())
-        {
-            // reached max south while holding button
-            ResetMovement();
-            Logger::warn(TAG, "MAX SOUTH while holding button. Reset movements.");
+            AddMoveEventQueue(MoveDirection::MoveSouth, 8);
         }
         else if (b1_pin_Auto_state == _pressed &&
                  previousBtnPressed != config.B1_pin_Auto)
         {
             previousBtnPressed = config.B1_pin_Auto;
-            if (GetPositioningMode() == PositionMode::Manual)
-            {
-                SetPositioningMode(PositionMode::Automatic);
-            }
+            AddMoveEventQueue(MoveDirection::NoMove, 9);
+            SetPositioningMode(PositionMode::Automatic);
         }
         else if (previousBtnPressed != 0 &&
                  b1_pin_Auto_state == _notPressed &&
@@ -384,30 +392,26 @@ public:
         {
             Logger::warn(TAG, "Btn Released, Resetting Movement");
             previousBtnPressed = 0;
-            ResetMoving();
+            AddMoveEventQueue(MoveDirection::NoMove, 10);
+            ResetMovement();
         }
     }
 
-    MoveEvent getLastMoveEvent()
+    MoveEvent getCurrentMoveEvent()
     {
+        // Logger::warn(TAG, "Getting current move event%d", MoveEventQueue.back().direction);
         return MoveEventQueue.back();
     }
 
-    void ManageMaxCommands()
+    MoveEvent getPreviousMoveEvent()
     {
-        if (MoveEventQueue.size() == 0)
+        if (MoveEventQueue.size() < 2)
         {
-            return;
+            // Logger::warn(TAG, "No previous move event");
+            return MoveEvent{MoveDirection::NoMove, time(nullptr)};
         }
-        MoveEvent lastEvent = getLastMoveEvent();
-        if (lastEvent.direction == MoveDirection::MaxNorth)
-        {
-            TryMoveNorth(true);
-        }
-        else if (lastEvent.direction == MoveDirection::MaxSouth)
-        {
-            TryMoveSouth(true);
-        }
+        // Logger::warn(TAG, "Getting previous move event%d", MoveEventQueue[MoveEventQueue.size() - 2].direction);
+        return MoveEventQueue[MoveEventQueue.size() - 2];
     }
 
     void UpdateLEDStates()
@@ -436,36 +440,34 @@ public:
 
     bool isMaxNorth()
     {
-        return analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val;
+        bool ismax = analogRead(config.POT1_pin_MaxAngl) <= config.POT_Max_North_Val;
+        if (ismax)
+        {
+            AddMoveEventQueue(MoveDirection::NoMove, 10);
+        }
+        return ismax;
     }
     bool isMaxSouth()
     {
-        return analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_South_Val;
+        bool ismax = analogRead(config.POT1_pin_MaxAngl) >= config.POT_Max_South_Val;
+        if (ismax)
+        {
+            AddMoveEventQueue(MoveDirection::NoMove, 11);
+        }
+        return ismax;
     }
 
     void TryMoveSouth(bool isMaxCommand = false)
     {
-        Logger::warn(TAG, "ongoingMovement: %d", getLastMoveEvent().direction);
+        Logger::warn(TAG, "SOUTH ongoingMovement: %d", getCurrentMoveEvent().direction);
 
-        Logger::warn(TAG, "Move %s South Triggered", isMaxCommand ? "MAX" : "");
-        // Logger::info(TAG, "\n %d %d %d \n", config.POT1_pin_MaxAngl, config.POT_Max_South_Val, analogRead(config.POT1_pin_MaxAngl));
         if (isMaxSouth())
         {
             ResetMovement();
             Logger::warn(TAG, "MAX SOUTH. Reset movements.");
             return;
         }
-        auto newMoveDirrection = isMaxCommand ? MoveDirection::MaxSouth : MoveDirection::MoveSouth;
-
-        if (getLastMoveEvent().direction == MoveDirection::MaxNorth ||
-            getLastMoveEvent().direction == MoveDirection::MoveNorth)
-        {
-            ResetMovement();
-        }
-        if (newMoveDirrection != getLastMoveEvent().direction)
-        {
-            AddMoveEventQueue(newMoveDirrection);
-        }
+        Logger::warn(TAG, "Move %sSouth Triggered", isMaxCommand ? "MAX" : "");
         SetRelayState(config.R2_pin_MoveNorth, false);
         delay(100);
         SetRelayState(config.R1_pin_MoveSouth, true);
@@ -475,24 +477,14 @@ public:
 
     void TryMoveNorth(bool isMaxCommand = false)
     {
-        Logger::warn(TAG, "ongoingMovement: %d", getLastMoveEvent().direction);
-        Logger::warn(TAG, "Move %s North Triggered", isMaxCommand ? "MAX" : "");
+        Logger::warn(TAG, "NORTH ongoingMovement: %d", getCurrentMoveEvent().direction);
         if (isMaxNorth())
         {
             ResetMovement();
             Logger::warn(TAG, "MAX NORTH. Reset movements.");
             return;
         }
-        auto newMoveDirrection = isMaxCommand ? MoveDirection::MaxNorth : MoveDirection::MoveNorth;
-        if (getLastMoveEvent().direction == MoveDirection::MaxSouth ||
-            getLastMoveEvent().direction == MoveDirection::MoveSouth)
-        {
-            ResetMovement();
-        }
-        if (newMoveDirrection != getLastMoveEvent().direction)
-        {
-            AddMoveEventQueue(newMoveDirrection);
-        }
+        Logger::warn(TAG, "Move %sNorth Triggered", isMaxCommand ? "MAX " : "");
         SetRelayState(config.R1_pin_MoveSouth, false);
         delay(100);
         SetRelayState(config.R2_pin_MoveNorth, true);
@@ -502,7 +494,14 @@ public:
 
     void ResetMovement()
     {
-        AddMoveEventQueue(MoveDirection::NoMove);
+        // AddMoveEventQueue(MoveDirection::NoMove, 0);
+
+        if (getCurrentMoveEvent().direction == MoveDirection::NoMove &&
+            getPreviousMoveEvent().direction == MoveDirection::NoMove)
+        {
+            return; // Already stopped
+        }
+        AddMoveEventQueue(MoveDirection::NoMove, -2);
         Logger::warn(TAG, "Resetting Movement");
         SetRelayState(config.R0_pin_Power, false);
         delay(50);

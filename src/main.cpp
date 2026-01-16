@@ -79,7 +79,6 @@ void loop()
                 positionManager->GetPositioningMode() == PositionMode::LowLight
             ? config.positioningUpdateIntervalMsLowLight
             : config.positioningUpdateIntervalMs;
-            positioningInterval = positionManager->OngoingMovement() ? 100 : positioningInterval;
     if (millis() - previousPositioningMillis >= positioningInterval)
     {
         previousPositioningMillis = millis();
@@ -89,15 +88,15 @@ void loop()
         positionManager->UpdatePositioning();
     }
 
-    if (millis() - previousButtonMillis >= 50)
+    if (millis() - previousButtonMillis >= 250)
     {
+        positionManager->RefreshPositioning ();
         previousButtonMillis = millis();
         positionManager->MonitorBtnStates();
         positionManager->UpdateLEDStates();
         asyncWebServerManager->loopWebServer();
         // bleManager->loopBLE();
         bluetoothManager->BT_doWork();
-        positionManager->ManageMaxCommands();
     }
     auto logs = Logger::getLogs();
     for (auto &entry : logs)

@@ -52,11 +52,11 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
             positionManager->SetPositioningMode(PositionMode::Manual);
             if (message.indexOf("MOVE_NORTH_down") >= 0)
             {
-                positionManager->TryMoveNorth();
+                positionManager->AddMoveEventQueue(MoveDirection::MoveNorth,20);
             }
             if (message.indexOf("MOVE_SOUTH_down") >= 0)
             {
-                positionManager->TryMoveSouth();
+                positionManager->AddMoveEventQueue(MoveDirection::MoveSouth,21);
             }
         }
         else if (message.indexOf("MOVE_MAX_NORTH_down") >= 0 || message.indexOf("MOVE_MAX_SOUTH_down") >= 0)
@@ -64,25 +64,25 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
             positionManager->SetPositioningMode(PositionMode::Manual);
             if (message.indexOf("MOVE_MAX_NORTH_down") >= 0)
             {
-                positionManager->TryMoveNorth(true);
+                positionManager->AddMoveEventQueue(MoveDirection::MaxNorth,22);
             }
             if (message.indexOf("MOVE_MAX_SOUTH_down") >= 0)
             {
-                positionManager->TryMoveSouth(true);
+                positionManager->AddMoveEventQueue(MoveDirection::MaxSouth,23);
             }
         }
         else if (message.indexOf("MOVE_NORTH_up") >= 0 || message.indexOf("MOVE_SOUTH_up") >= 0)
         {
-            positionManager->ResetMoving();
+            positionManager->AddMoveEventQueue(MoveDirection::NoMove,24);
         }
         else if (message.indexOf("AUTO_MODE") >= 0 || message.indexOf("MANUAL_MODE") >= 0)
         {
-            positionManager->ResetMoving();
+            positionManager->AddMoveEventQueue(MoveDirection::NoMove,25);
             positionManager->SetPositioningMode(message.indexOf("AUTO_MODE") >= 0 ? PositionMode::Automatic : PositionMode::Manual);
         }
         else if (message.indexOf("RESET") >= 0)
         {
-            positionManager->ResetMoving();
+            positionManager->AddMoveEventQueue(MoveDirection::NoMove,26);
         }
         else if (message.indexOf("RESTART") >= 0)
         {

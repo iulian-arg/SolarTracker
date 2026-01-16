@@ -65,40 +65,42 @@ public:
             {
                 BT_WriteLine("Moving North");
                 positionManager->SetPositioningMode(PositionMode::Manual);
-                positionManager->TryMoveNorth();
+                positionManager->AddMoveEventQueue(MoveDirection::MoveNorth, 30);
             }
             else if (command == String("SOUTH"))
             {
                 BT_WriteLine("Moving South");
                 positionManager->SetPositioningMode(PositionMode::Manual);
-                positionManager->TryMoveSouth();
+                positionManager->AddMoveEventQueue(MoveDirection::MoveSouth, 31);
             }
             else if (command == String("AUTO"))
             {
                 BT_WriteLine("Setting to Auto Mode");
                 positionManager->SetPositioningMode(PositionMode::Automatic);
+                positionManager->AddMoveEventQueue(MoveDirection::NoMove, 32);
             }
             else if (command == String("MANUAL"))
             {
                 BT_WriteLine("Setting to Manual Mode");
                 positionManager->SetPositioningMode(PositionMode::Manual);
+                positionManager->AddMoveEventQueue(MoveDirection::NoMove, 33);
             }
             else if (command == String("RESET"))
             {
                 BT_WriteLine("Resetting Position");
-                positionManager->ResetMoving();
+                positionManager->AddMoveEventQueue(MoveDirection::NoMove, 34);
             }
             else if (command == String("maxN"))
             {
                 BT_WriteLine("Setting Max North Position");
                 positionManager->SetPositioningMode(PositionMode::Manual);
-                positionManager->TryMoveNorth(true);
+                positionManager->AddMoveEventQueue(MoveDirection::MaxNorth, 35);
             }
             else if (command == String("maxS"))
             {
                 BT_WriteLine("Setting Max South Position");
                 positionManager->SetPositioningMode(PositionMode::Manual);
-                positionManager->TryMoveSouth(true);
+                positionManager->AddMoveEventQueue(MoveDirection::MaxSouth, 36);
             }
             else if (command == String("RESTART"))
             {
